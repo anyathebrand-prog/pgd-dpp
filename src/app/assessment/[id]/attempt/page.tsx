@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { and, desc, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
-import { assessments, questions, submissions } from '@/db/schema';
+import { assessmentAccommodations, assessments, questions, submissions } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { submitAttempt } from '@/modules/learning/actions';
@@ -57,8 +57,27 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
       .orderBy(questions.position),
   );
 
-  const deadline = assessment.timeLimitMinutes
-    ? new Date(attempt.startedAt.getTime() + assessment.timeLimitMinutes * 60_000)
+  // C-06: if extra time was granted, it is part of the deadline and the
+  // student is told so — an accommodation nobody mentions is one they cannot
+  // rely on.
+  const [accommodation] = await withTenant(institution.id, (tx) =>
+    tx
+      .select()
+      .from(assessmentAccommodations)
+      .where(
+        and(
+          eq(assessmentAccommodations.assessmentId, id),
+          eq(assessmentAccommodations.userId, me.userId),
+        ),
+      )
+      .limit(1),
+  );
+
+  const allowedMinutes = assessment.timeLimitMinutes
+    ? assessment.timeLimitMinutes + (accommodation?.extraMinutes ?? 0)
+    : null;
+  const deadline = allowedMinutes
+    ? new Date(attempt.startedAt.getTime() + allowedMinutes * 60_000)
     : null;
 
   return (
@@ -70,6 +89,17 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
           ? ` · submit by ${deadline.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}`
           : ''}
       </p>
+
+      {accommodation ? (
+        <div className="mt-6">
+          <Banner tone="info" title="You have extra time on this assessment">
+            <p>
+              {accommodation.extraMinutes} additional minutes, on top of the{' '}
+              {assessment.timeLimitMinutes} this assessment normally allows.
+            </p>
+          </Banner>
+        </div>
+      ) : null}
 
       {deadline ? (
         <div className="mt-6">

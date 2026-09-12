@@ -370,6 +370,28 @@ async function main() {
       },
     ]);
 
+    // G-18's console needs someone to own it. The facilitator is assigned to
+    // the modules, because holding the role is not the same as teaching one.
+    const [facilitator] = await db
+      .insert(s.users)
+      .values({
+        email: `facilitator@${inst.slug}.example.ng`,
+        fullName: inst.slug === 'unilag' ? 'Dr Yemi Sowande' : 'Dr Ngozi Okafor',
+        passwordHash,
+        status: 'staff',
+        emailVerifiedAt: new Date(),
+      })
+      .returning({ id: s.users.id });
+    await db
+      .insert(s.memberships)
+      .values({ userId: facilitator.id, institutionId: inst.id, role: 'facilitator' });
+    for (const m of modules) {
+      await db
+        .update(s.modules)
+        .set({ facilitatorId: facilitator.id })
+        .where(eq(s.modules.id, m.id));
+    }
+
     await db.insert(s.announcements).values({
       institutionId: inst.id,
       cohortId: cohort.id,
@@ -499,6 +521,38 @@ async function main() {
       cohortId: cohort.id,
       matricNumber: `${inst.shortName}/DPP/2027/${inst.slug === 'unilag' ? 'A1042' : 'B2071'}`,
     });
+
+    // An attempt waiting to be marked. The MCQ and true/false are already
+    // scored; the short answer is why a person has to look at it.
+    const [quiz] = await db
+      .select()
+      .from(s.assessments)
+      .where(eq(s.assessments.institutionId, inst.id));
+    const quizQuestions = await db
+      .select()
+      .from(s.questions)
+      .where(eq(s.questions.assessmentId, quiz.id));
+
+    const answers: Record<string, string> = {};
+    for (const q of quizQuestions) {
+      answers[q.id] =
+        q.kind === 'short_answer'
+          ? 'Because consent can be withdrawn at any moment, and a controller who would carry on processing regardless has chosen a basis that does not describe what it is actually doing.'
+          : (q.correctAnswer ?? '');
+    }
+
+    await db.insert(s.submissions).values({
+      institutionId: inst.id,
+      assessmentId: quiz.id,
+      userId: student.id,
+      attempt: 1,
+      answers,
+      autoScore: quizQuestions
+        .filter((q) => q.kind !== 'short_answer')
+        .reduce((sum, q) => sum + q.marks, 0),
+      submittedAt: new Date(Date.now() - 3 * day),
+      status: 'submitted',
+    });
   }
 
   /* --------------------------------------------------------------- DPO data */
@@ -535,6 +589,8 @@ async function main() {
   console.log('  candidate@unilag.example.ng   submitted application');
   console.log('  student@unilag.example.ng     enrolled student');
   console.log('  registry@unilag.example.ng    registry officer (TOTP enrolment on first login)');
+  console.log('  facilitator@unilag.example.ng teaching console at /teach, with work to mark');
+  console.log('  admin@unilag.example.ng       institution admin console at /admin');
   console.log('  dpo@example.ng                DPO console at http://app.localhost:3000/dpo');
   console.log('');
   console.log('The UNN accounts mirror these. Try reading a UNILAG record while signed in as UNN.');

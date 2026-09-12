@@ -134,6 +134,7 @@ the only place an enrollment and matriculation number are created. The browser c
 | CMP-09 72-hour breach clock | `breaches.discovered_at`; affected subjects scoped via the indexed `audit_log.subject_id` |
 | CMP-10 retention | `documents.purge_after`, set at the moment a rejection is recorded, executed by `npm run worker -- purge` — which verifies the object was actually deleted before marking the row purged. `/dpo/retention` separates a failed purge from one that never ran, because those need different responses |
 | CMP-13 signed URLs | No object is ever public. [`/api/files`](src/app/api/files/route.ts) requires a valid unexpired signature **and** a session **and** ownership or a staff role — a forwarded link is not authorisation |
+| C-06 extended time | Assessment timing is essential, so WCAG 2.2.1's exception applies — but the resolution is to build the accommodation anyway. A facilitator grants extra minutes per student from the grading queue, `submitAttempt` adds them to the deadline, and the student is told they have it |
 | CMP-14 immutable audit | The app role holds INSERT and SELECT on `audit_log` and nothing else |
 
 Two deliberate departures from the brief, both flagged in the PRD itself:
@@ -220,6 +221,10 @@ npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- 
 A handful of links point at screens that are not built yet — `/account`, `/alumni`,
 `/library/takedown`, `/admin/payouts`, `/admin/programme`, `/dpo/evidence` and `/dpo/snag`. They
 404 rather than misbehave.
+
+**Assessment authoring is read-only.** FC-02 creates and orders lessons and publishes modules, but
+quizzes are seeded rather than built in the UI. Video is absent entirely — §7.2 puts it on
+Cloudflare Stream, so FC-02 shows no transcode state because there is no transcode.
 
 **Fee versioning is an open product question (app flow G-19).** Changing a fee changes what
 candidates mid-application are charged at checkout. Anyone who has already paid is unaffected —

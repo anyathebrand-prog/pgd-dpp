@@ -594,13 +594,52 @@ export const submissions = pgTable(
     startedAt: createdAt(),
     submittedAt: timestamp('submitted_at', { withTimezone: true }),
     autoScore: integer('auto_score'),
-    status: text('status', { enum: ['in_progress', 'submitted', 'graded'] })
+    status: text('status', { enum: ['in_progress', 'submitted', 'returned', 'graded'] })
       .notNull()
       .default('in_progress'),
+    /** FC-03 "return for revision". Shown to the student verbatim. */
+    returnedNote: text('returned_note'),
   },
   (t) => [
     uniqueIndex('submissions_assessment_user_attempt_key').on(t.assessmentId, t.userId, t.attempt),
   ],
+);
+
+/**
+ * Conflict C-06. A timed assessment cannot be extended by the person taking
+ * it, which fails WCAG 2.2.1 unless the timing is essential. Assessment
+ * timing is essential, so the exception applies — but the resolution is to
+ * build extended time into the facilitator console rather than to rely on
+ * the exception alone and leave disabled students with no route.
+ *
+ * Granted per student per assessment, with a reason, by the facilitator who
+ * teaches the module.
+ */
+export const assessmentAccommodations = pgTable(
+  'assessment_accommodations',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    assessmentId: uuid('assessment_id')
+      .notNull()
+      .references(() => assessments.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Added to the assessment's own limit, not a replacement for it. */
+    extraMinutes: integer('extra_minutes').notNull(),
+    /**
+     * Why it was granted. Deliberately free text and deliberately not a
+     * diagnosis — a facilitator recording "documented accommodation on file
+     * with the registry" is the right level of detail to hold here.
+     */
+    reason: text('reason').notNull(),
+    grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('accommodations_assessment_user_key').on(t.assessmentId, t.userId)],
 );
 
 export const grades = pgTable('grades', {

@@ -48,6 +48,28 @@ test.beforeAll(async ({ browser, baseURL }) => {
   await sql`UPDATE institutions SET brand_colour = '#1B3A6B' WHERE slug = 'unilag'`;
   await sql.end();
 
+  // The capacity guard needs an intake with seats genuinely committed. It
+  // gets its own rather than borrowing the seeded one: a test that mutates
+  // shared fixture data is how the funnel suite ended up unable to admit
+  // anyone after this file lowered the seeded cohort to a single place.
+  const fixture = postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
+  const [inst2] = await fixture`SELECT id FROM institutions WHERE slug = 'unilag'`;
+  const [prog] = await fixture`SELECT id FROM programmes WHERE institution_id = ${inst2.id}`;
+  const [full] = await fixture`
+    INSERT INTO cohorts (institution_id, programme_id, name, capacity, status)
+    VALUES (${inst2.id}, ${prog.id}, ${'E2E committed ' + RUN}, 5, 'draft')
+    RETURNING id`;
+  for (const n of [1, 2]) {
+    const [u] = await fixture`
+      INSERT INTO users (email, full_name, status, email_verified_at)
+      VALUES (${`e2e-seat-${RUN}-${n}@example.ng`}, ${'Seat holder ' + n}, 'candidate', now())
+      RETURNING id`;
+    await fixture`
+      INSERT INTO applications (institution_id, cohort_id, user_id, reference, status)
+      VALUES (${inst2.id}, ${full.id}, ${u.id}, ${`E2E-SEAT-${RUN}-${n}`}, 'admitted')`;
+  }
+  await fixture.end();
+
   mkdirSync(join(process.cwd(), '.auth'), { recursive: true });
   // storageState must be cleared explicitly: newContext inherits the
   // describe-level `use`, so it would try to read the file this is creating.
@@ -94,8 +116,17 @@ test.afterAll(async () => {
   // Intakes this suite created are drafts and invisible to candidates, but
   // they clutter the fixture, so they go too.
   await sql`
+    DELETE FROM applications WHERE reference LIKE 'E2E-SEAT-%'`;
+  await sql`DELETE FROM users WHERE email LIKE 'e2e-seat-%@example.ng'`;
+  await sql`
     DELETE FROM cohorts
-    WHERE institution_id = ${inst.id} AND (name LIKE 'Test intake %' OR name LIKE 'Bad dates %')`;
+    WHERE institution_id = ${inst.id}
+      AND (name LIKE 'Test intake %' OR name LIKE 'Bad dates %' OR name LIKE 'E2E committed %')`;
+  // Belt and braces: the seeded intake's capacity is what the funnel suite
+  // depends on to admit a candidate.
+  await sql`
+    UPDATE cohorts SET capacity = 60
+    WHERE institution_id = ${inst.id} AND name = 'January 2027 intake'`;
   await sql.end();
 });
 
@@ -175,13 +206,14 @@ test.describe('intakes', () => {
     // already promised would silently oversell, so it is refused outright
     // rather than accepted and quietly violated.
     await page.goto('/admin/cohorts');
-    await page.getByLabel(/^Editing/).selectOption({ index: 1 });
+    await page.waitForLoadState('networkidle');
+    await page.getByLabel(/^Editing/).selectOption({ label: `E2E committed ${RUN}` });
     await page.getByLabel(/^Places/).fill('1');
     await page.getByRole('button', { name: 'Update intake' }).click();
 
-    await expect(page.getByText(/already committed|places are already/i)).toBeVisible({
-      timeout: 30_000,
-    });
+    // Two seats are committed, so one place is refused outright rather than
+    // accepted and quietly violated.
+    await expect(page.getByText(/already committed/i)).toBeVisible({ timeout: 30_000 });
   });
 
   test('refuses teaching that starts before applications close', async ({ page }) => {

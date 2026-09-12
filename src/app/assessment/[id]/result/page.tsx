@@ -38,6 +38,18 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
 
         {!latest ? (
           <p className="t-body mt-6 text-ink-700">You have not attempted this assessment.</p>
+        ) : latest.submission.status === 'returned' ? (
+          <div className="mt-8">
+            {/* Not an error — a returned submission is work in progress, and
+                styling it as a failure would misread what happened. */}
+            <Banner tone="warning" title="Returned for revision">
+              <p>{latest.submission.returnedNote}</p>
+              <p className="mt-2">
+                Your facilitator has asked for changes rather than marking it. Attempt it again
+                once you have addressed the above.
+              </p>
+            </Banner>
+          </div>
         ) : latest.submission.status === 'submitted' ? (
           <div className="mt-8">
             {/* Not an error, so not --danger. Pending marking is a neutral state. */}

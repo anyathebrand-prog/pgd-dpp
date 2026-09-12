@@ -3,7 +3,14 @@
 import { redirect } from 'next/navigation';
 import { and, desc, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
-import { assessments, grades, lessonProgress, questions, submissions } from '@/db/schema';
+import {
+  assessmentAccommodations,
+  assessments,
+  grades,
+  lessonProgress,
+  questions,
+  submissions,
+} from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
@@ -124,7 +131,23 @@ export async function submitAttempt(_prev: FormState, form: FormData): Promise<F
     // The timer is enforced server-side. A client-side countdown is a courtesy;
     // it is not a control, and an open dev-tools panel should not buy time.
     if (assessment.timeLimitMinutes) {
-      const deadline = attempt.startedAt.getTime() + assessment.timeLimitMinutes * 60_000;
+      // Conflict C-06: extended time granted by the facilitator is added to
+      // the limit here. An accommodation recorded but not applied by the
+      // thing that enforces the deadline is worse than none — it looks
+      // granted and behaves as though it never was.
+      const [accommodation] = await tx
+        .select({ extraMinutes: assessmentAccommodations.extraMinutes })
+        .from(assessmentAccommodations)
+        .where(
+          and(
+            eq(assessmentAccommodations.assessmentId, assessmentId),
+            eq(assessmentAccommodations.userId, me.userId),
+          ),
+        )
+        .limit(1);
+
+      const allowedMinutes = assessment.timeLimitMinutes + (accommodation?.extraMinutes ?? 0);
+      const deadline = attempt.startedAt.getTime() + allowedMinutes * 60_000;
       // A 60-second grace absorbs a slow submit on a bad connection rather
       // than punishing a 3G student for the network.
       if (Date.now() > deadline + 60_000) {
