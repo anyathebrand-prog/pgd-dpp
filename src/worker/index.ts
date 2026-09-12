@@ -46,14 +46,29 @@ async function purge() {
   const failures: string[] = [];
 
   for (const doc of due) {
-    const gone = await deleteObject(doc.objectKey);
+    let gone = false;
+    let error: string | null = null;
+    try {
+      gone = await deleteObject(doc.objectKey);
+      if (!gone) error = 'The object store reported the file was not removed.';
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+
     if (!gone) {
+      // Recorded, not merely counted. DP-07 has to distinguish "tried and
+      // failed" from "never ran", and it cannot do that from an absent
+      // purgedAt alone.
+      await db
+        .update(s.documents)
+        .set({ purgeAttemptedAt: new Date(), purgeError: error })
+        .where(eq(s.documents.id, doc.id));
       failures.push(doc.id);
       continue;
     }
     await db
       .update(s.documents)
-      .set({ purgedAt: new Date(), status: 'purged' })
+      .set({ purgedAt: new Date(), status: 'purged', purgeAttemptedAt: new Date(), purgeError: null })
       .where(eq(s.documents.id, doc.id));
     await db.insert(s.auditLog).values({
       institutionId: doc.institutionId,

@@ -93,24 +93,34 @@ export function LinkButton({
 export function Field({
   label,
   name,
+  inputId,
   helper,
   error,
   required,
   children,
 }: {
   label: string;
+  /** The form field name. Two forms on one page may share it. */
   name: string;
+  /**
+   * The DOM id, when it has to differ from the name. Ids are page-wide, so
+   * two panels that both post a field called `note` would otherwise emit
+   * duplicate ids — and both labels then point at whichever input came first,
+   * which is a real screen-reader failure, not a cosmetic one.
+   */
+  inputId?: string;
   helper?: string;
   error?: string;
   required?: boolean;
   children?: ReactNode;
 }) {
-  const helperId = helper ? `${name}-helper` : undefined;
-  const errorId = error ? `${name}-error` : undefined;
+  const id = inputId ?? name;
+  const helperId = helper ? `${id}-helper` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
   return (
     // §4.1 vertical rhythm: 8px label→input, 6px input→helper, 24px between fields.
     <div className="mb-6">
-      <label htmlFor={name} className="t-label mb-2 block text-ink-900">
+      <label htmlFor={id} className="t-label mb-2 block text-ink-900">
         {label}
         {required ? (
           <span className="text-ink-500"> (required)</span>

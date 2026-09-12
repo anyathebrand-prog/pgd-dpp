@@ -129,9 +129,10 @@ the only place an enrollment and matriculation number are created. The browser c
 | Requirement | Where it lives |
 |---|---|
 | CMP-06 granular consent | Four separate decisions, each row storing the wording shown and the notice version in force. Append-only — changing a consent writes a new row |
-| CMP-07 30-day clock | `data_subject_requests.due_at`, rendered as the SLA clock on [DP-01](src/app/dpo/page.tsx) |
+| CMP-07 30-day clock | `data_subject_requests.due_at`, with escalation at day 20 and 27. Public intake at `/dpo/request`, queue at `/dpo/requests`, fulfilment at `/dpo/requests/{id}`. Erasure that collides with an academic record is refused with a recorded reason — the action rejects it, not just the UI |
+| CMP-07 self-service | `/account/privacy/export` hands a student everything held about them, assembled by the same code that shows the DPO what is held, so the two cannot drift |
 | CMP-09 72-hour breach clock | `breaches.discovered_at`; affected subjects scoped via the indexed `audit_log.subject_id` |
-| CMP-10 retention | `documents.purge_after`, set at the moment a rejection is recorded, executed by `npm run worker -- purge` — which verifies the object was actually deleted before marking the row purged |
+| CMP-10 retention | `documents.purge_after`, set at the moment a rejection is recorded, executed by `npm run worker -- purge` — which verifies the object was actually deleted before marking the row purged. `/dpo/retention` separates a failed purge from one that never ran, because those need different responses |
 | CMP-13 signed URLs | No object is ever public. [`/api/files`](src/app/api/files/route.ts) requires a valid unexpired signature **and** a session **and** ownership or a staff role — a forwarded link is not authorisation |
 | CMP-14 immutable audit | The app role holds INSERT and SELECT on `audit_log` and nothing else |
 
@@ -198,8 +199,8 @@ npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- 
 `/apply`, which lose the tenant prefix. Subdomains are the supported mechanism.
 
 A handful of links point at screens that are not built yet — `/account`, `/alumni`,
-`/library/takedown`, `/admin/cohorts`, `/admin/fees`, `/admin/reconciliation`, `/apply/letter`, and
-the DPO sub-pages. They 404 rather than misbehave.
+`/library/takedown`, `/admin/cohorts`, `/admin/fees`, `/admin/reconciliation`, `/dpo/evidence` and
+`/dpo/snag`. They 404 rather than misbehave.
 
 ## Testing against a production build
 

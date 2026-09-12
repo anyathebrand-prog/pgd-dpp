@@ -207,6 +207,17 @@ export default async function DpoConsole() {
               </p>
             </Panel>
 
+            <Panel title="Where requests come from">
+              <p className="t-body-sm m-0 mb-3 text-ink-700">
+                §6.6 wants most requests self-served and never becoming tickets. A student can
+                download their own data and change their own consents without asking. What arrives
+                here is what genuinely needed a person.
+              </p>
+              <Link href="/dpo/request" className="t-body-sm text-ink-900 underline underline-offset-2">
+                The public intake form
+              </Link>
+            </Panel>
+
             <Panel title="Evidence export">
               <p className="t-body-sm m-0 mb-3 text-ink-700">
                 CMP-16: RoPA, consent records, DPIA, audit log and breach register, in one archive,

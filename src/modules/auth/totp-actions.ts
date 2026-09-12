@@ -32,7 +32,20 @@ export async function confirmTotpEnrolment(_prev: FormState, form: FormData): Pr
   await db.update(users).set({ totpConfirmedAt: new Date() }).where(eq(users.id, me.userId));
   await db.update(sessions).set({ mfaSatisfied: true }).where(eq(sessions.id, me.sessionId));
   await audit({ action: 'auth.totp_enrolled', actorId: me.userId, subjectId: me.userId });
-  return { redirectTo: '/admin' };
+  return { redirectTo: consoleFor(me) };
+}
+
+/**
+ * Send people to a console they can actually open. A DPO holds a platform
+ * role and has no access to an institution's admin area, so landing them on
+ * /admin bounced them straight to /no-access.
+ */
+function consoleFor(me: { roles: string[]; platformRoles: string[] }) {
+  const all = [...me.roles, ...me.platformRoles];
+  if (all.includes('dpo')) return '/dpo';
+  if (all.includes('super_admin')) return '/platform/tenants';
+  if (all.includes('curator')) return '/curate';
+  return '/admin';
 }
 
 /** AU-08 challenge. */
@@ -54,5 +67,5 @@ export async function verifyTotp(_prev: FormState, form: FormData): Promise<Form
 
   await db.update(sessions).set({ mfaSatisfied: true }).where(eq(sessions.id, me.sessionId));
   await audit({ action: 'auth.totp_ok', actorId: me.userId, subjectId: me.userId });
-  return { redirectTo: '/admin' };
+  return { redirectTo: consoleFor(me) };
 }

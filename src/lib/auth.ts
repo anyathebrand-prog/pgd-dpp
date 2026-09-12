@@ -26,6 +26,13 @@ export type Principal = {
   totpEnrolled: boolean;
   /** Roles held at the institution currently in scope. Empty off-tenant. */
   roles: Role[];
+  /**
+   * Roles that are platform-wide by definition (§6.3 makes the DPO a platform
+   * role). These resolve wherever the holder is, including on `app.` and the
+   * platform host where no institution is in scope — otherwise the DPO
+   * console, which lives at `app./dpo`, would be unreachable by the DPO.
+   */
+  platformRoles: Role[];
   /** Every role at every institution — for the AU-10 institution chooser. */
   allMemberships: { institutionId: string; role: Role }[];
 };
@@ -119,6 +126,9 @@ export const currentPrincipal = cache(async (): Promise<Principal | null> => {
 
   const inst = await currentInstitution();
   const roles = inst ? all.filter((m) => m.institutionId === inst.id).map((m) => m.role) : [];
+  const platformRoles = [
+    ...new Set(all.map((m) => m.role).filter((r) => PLATFORM_ROLES.includes(r))),
+  ];
 
   return {
     userId: row.userId,
@@ -129,6 +139,7 @@ export const currentPrincipal = cache(async (): Promise<Principal | null> => {
     mfaSatisfied: row.mfaSatisfied,
     totpEnrolled: Boolean(row.totpConfirmedAt),
     roles,
+    platformRoles,
     allMemberships: all,
   };
 });
@@ -150,12 +161,22 @@ export async function requireUser(): Promise<Principal> {
   return p;
 }
 
+/**
+ * Roles whose authority is not scoped to one institution. The DPO is a
+ * statutory platform role under §6.3, and the curator manages a shared
+ * catalogue; both need to work on hosts where no tenant is in scope.
+ */
+export const PLATFORM_ROLES: Role[] = ['dpo', 'super_admin', 'curator'];
+
 /** AUTH-08: mandatory TOTP for these roles. Not optional, not configurable. */
 export const MFA_REQUIRED_ROLES: Role[] = ['registry', 'institution_admin', 'super_admin', 'dpo'];
 
 export async function requireRole(...allowed: Role[]): Promise<Principal> {
   const p = await requireUser();
-  const held = p.roles.filter((r) => allowed.includes(r));
+  // Tenant-scoped roles come from the institution in scope; platform roles
+  // hold everywhere. Without the union, the DPO console at `app./dpo` would
+  // reject the DPO, because no institution resolves on that host.
+  const held = [...new Set([...p.roles, ...p.platformRoles])].filter((r) => allowed.includes(r));
   if (held.length === 0) redirect('/no-access');
 
   // AUTH-08. An unsatisfied second factor is not an error — it is an

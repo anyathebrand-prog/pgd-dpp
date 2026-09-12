@@ -322,6 +322,13 @@ export const documents = pgTable(
     /** CMP-10. Set when the retention clock starts; the purge job reads this. */
     purgeAfter: timestamp('purge_after', { withTimezone: true }),
     purgedAt: timestamp('purged_at', { withTimezone: true }),
+    /**
+     * DP-07 needs to tell "not yet due" from "tried and failed". A failed
+     * purge has to alert rather than sit quietly in a log, and it cannot do
+     * that if the only evidence is an absent purgedAt.
+     */
+    purgeAttemptedAt: timestamp('purge_attempted_at', { withTimezone: true }),
+    purgeError: text('purge_error'),
     createdAt: createdAt(),
   },
   (t) => [
@@ -781,8 +788,15 @@ export const dataSubjectRequests = pgTable('data_subject_requests', {
   routedTo: text('routed_to', { enum: ['platform', 'institution'] })
     .notNull()
     .default('platform'),
+  /**
+   * §6.6: verify the requester before fulfilling — but do not demand more
+   * identity data than we already hold. This records that the check happened
+   * and how, not a pile of fresh identity documents.
+   */
+  identityVerifiedAt: timestamp('identity_verified_at', { withTimezone: true }),
+  identityVerifiedNote: text('identity_verified_note'),
   status: text('status', {
-    enum: ['received', 'verifying', 'in_progress', 'fulfilled', 'refused'],
+    enum: ['received', 'verifying', 'in_progress', 'routed', 'fulfilled', 'refused'],
   })
     .notNull()
     .default('received'),
