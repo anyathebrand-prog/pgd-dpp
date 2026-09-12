@@ -1,0 +1,22 @@
+# §7.9 local environment. Seeded with a two-tenant fixture so isolation bugs
+# surface in development rather than in production.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pgd_dpp_db
+    environment:
+      POSTGRES_USER: pgd_owner
+      POSTGRES_PASSWORD: pgd_local_dev
+      POSTGRES_DB: pgd_dpp
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgd_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pgd_owner -d pgd_dpp']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgd_data:
