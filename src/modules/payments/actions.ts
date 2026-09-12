@@ -1,11 +1,11 @@
 'use server';
 
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { applications, transactionLines, transactions } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
+import type { FormState } from '../auth/actions';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
 import { initializeTransaction, newReference, splitFor } from '@/lib/paystack';
@@ -19,7 +19,7 @@ import { feeFor, tuitionCart } from './fees';
  * reconciliation (PAY-08) and to the recovery email (PAY-10) — an
  * unrecorded attempt is a payment we cannot explain later.
  */
-export async function startApplicationFeeCheckout() {
+export async function startApplicationFeeCheckout(_prev: FormState, _form: FormData): Promise<FormState> {
   const me = await requireUser();
   const institution = await requireInstitution();
   const h = await headers();
@@ -27,11 +27,11 @@ export async function startApplicationFeeCheckout() {
   const [app] = await withTenant(institution.id, (tx) =>
     tx.select().from(applications).where(eq(applications.userId, me.userId)).limit(1),
   );
-  if (!app) redirect('/apply');
-  if (app.status !== 'awaiting_application_fee') redirect('/apply');
+  if (!app) return { redirectTo: '/apply' };
+  if (app.status !== 'awaiting_application_fee') return { redirectTo: '/apply' };
 
   const fee = await feeFor(institution.id, 'application', app.cohortId);
-  if (!fee) redirect('/apply');
+  if (!fee) return { redirectTo: '/apply' };
 
   const reference = newReference('APP');
   const split = splitFor(fee.amountKobo, institution.paystackSharePercent);
@@ -81,7 +81,7 @@ export async function startApplicationFeeCheckout() {
     metadata: { applicationId: app.id, institutionId: institution.id },
   });
 
-  redirect(init.authorizationUrl);
+  return { redirectTo: init.authorizationUrl };
 }
 
 /* --------------------------------------------------------------------- AP-10 */
@@ -91,7 +91,7 @@ export async function startApplicationFeeCheckout() {
  * it, and it is what unlocks the tuition checkout. A candidate cannot reach
  * PY-05 without `admitted` + `offer_accepted`.
  */
-export async function acceptOffer() {
+export async function acceptOffer(_prev: FormState, _form: FormData): Promise<FormState> {
   const me = await requireUser();
   const institution = await requireInstitution();
 
@@ -102,13 +102,13 @@ export async function acceptOffer() {
       .where(and(eq(applications.userId, me.userId), eq(applications.status, 'admitted')))
       .limit(1),
   );
-  if (!app) redirect('/apply');
+  if (!app) return { redirectTo: '/apply' };
 
   if (app.offerExpiresAt && app.offerExpiresAt < new Date()) {
     await withTenant(institution.id, (tx) =>
       tx.update(applications).set({ status: 'offer_lapsed' }).where(eq(applications.id, app.id)),
     );
-    redirect('/apply/outcome');
+    return { redirectTo: '/apply/outcome' };
   }
 
   await withTenant(institution.id, (tx) =>
@@ -127,10 +127,10 @@ export async function acceptOffer() {
     entityId: app.id,
   });
 
-  redirect('/pay/tuition');
+  return { redirectTo: '/pay/tuition' };
 }
 
-export async function declineOffer(_prev: unknown, form: FormData) {
+export async function declineOffer(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await requireUser();
   const institution = await requireInstitution();
   const reason = String(form.get('reason') ?? '').trim();
@@ -142,7 +142,7 @@ export async function declineOffer(_prev: unknown, form: FormData) {
       .where(and(eq(applications.userId, me.userId), eq(applications.status, 'admitted')))
       .limit(1),
   );
-  if (!app) redirect('/apply');
+  if (!app) return { redirectTo: '/apply' };
 
   await withTenant(institution.id, (tx) =>
     tx
@@ -161,12 +161,12 @@ export async function declineOffer(_prev: unknown, form: FormData) {
     detail: { reason },
   });
 
-  redirect('/apply');
+  return { redirectTo: '/apply' };
 }
 
 /* --------------------------------------------------------------------- PY-05 */
 
-export async function startTuitionCheckout() {
+export async function startTuitionCheckout(_prev: FormState, _form: FormData): Promise<FormState> {
   const me = await requireUser();
   const institution = await requireInstitution();
   const h = await headers();
@@ -179,10 +179,10 @@ export async function startTuitionCheckout() {
       .limit(1),
   );
   // The gate. Without an accepted offer there is no tuition checkout to reach.
-  if (!app) redirect('/apply');
+  if (!app) return { redirectTo: '/apply' };
 
   const cart = await tuitionCart(institution.id, app.cohortId);
-  if (cart.lines.length === 0) redirect('/apply');
+  if (cart.lines.length === 0) return { redirectTo: '/apply' };
 
   const reference = newReference('TUI');
   const split = splitFor(cart.totalKobo, institution.paystackSharePercent);
@@ -234,5 +234,5 @@ export async function startTuitionCheckout() {
     metadata: { applicationId: app.id, institutionId: institution.id },
   });
 
-  redirect(init.authorizationUrl);
+  return { redirectTo: init.authorizationUrl };
 }

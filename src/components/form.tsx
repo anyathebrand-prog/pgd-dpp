@@ -1,10 +1,21 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Banner, Button } from './ui';
 
-export type ActionState = { error?: string; notice?: string } | undefined;
+/**
+ * `redirectTo` exists because `redirect()` does not work from an action driven
+ * by `useActionState`: the action runs and its writes commit, but the client
+ * router settles on `/` instead of the target. A plain `<form action={fn}>`
+ * redirects correctly, so only the actions wired through this component are
+ * affected. Those return their destination as state and let the component
+ * navigate, which also keeps redirect and error handling on one path.
+ */
+export type ActionState =
+  | { error?: string; notice?: string; redirectTo?: string }
+  | undefined;
 type Action = (prev: ActionState, form: FormData) => Promise<ActionState>;
 
 /**
@@ -37,7 +48,12 @@ export function ActionForm({
   outstanding?: { label: string; href: string }[];
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, undefined);
+  const router = useRouter();
   const blocked = (outstanding?.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (state?.redirectTo) router.push(state.redirectTo);
+  }, [state?.redirectTo, router]);
 
   return (
     <form action={formAction} noValidate>

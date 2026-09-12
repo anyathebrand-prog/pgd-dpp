@@ -246,5 +246,5 @@ export async function issueDecision(_prev: FormState, form: FormData): Promise<F
   }
 
   revalidatePath('/admin/applications');
-  redirect('/admin/applications');
+  return { redirectTo: '/admin/applications' };
 }

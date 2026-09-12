@@ -2,7 +2,6 @@
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { authTokens, memberships, users } from '@/db/schema';
@@ -21,7 +20,7 @@ import { lockoutMs, rateLimit, verifyTurnstile } from '@/lib/ratelimit';
 import { audit } from '@/lib/audit';
 import { requireInstitution } from '@/lib/tenant';
 
-export type FormState = { error?: string; notice?: string } | undefined;
+export type FormState = { error?: string; notice?: string; redirectTo?: string } | undefined;
 
 const OTP_TTL_MS = 15 * 60_000;
 const RESET_TTL_MS = 30 * 60_000;
@@ -65,7 +64,7 @@ export async function signUp(_prev: FormState, form: FormData): Promise<FormStat
         subject: 'Someone tried to create an account with your email',
         text: 'You already have an account. If this was you, log in instead — or reset your password.',
       });
-      redirect('/signup/verify');
+      return { redirectTo: '/signup/verify' };
     }
     userId = existing.id;
   } else {
@@ -93,8 +92,7 @@ export async function signUp(_prev: FormState, form: FormData): Promise<FormStat
 
   // A session before verification, so the pending screen knows who is waiting.
   await createSession(userId, { institutionId: institution.id });
-  revalidatePath('/', 'layout');
-  redirect('/signup/verify');
+  return { redirectTo: '/signup/verify' };
 }
 
 async function issueOtp(userId: string, email: string) {
@@ -145,7 +143,7 @@ export async function verifyEmail(_prev: FormState, form: FormData): Promise<For
     .where(eq(users.id, me.userId));
   await audit({ action: 'auth.email_verified', actorId: me.userId, subjectId: me.userId });
 
-  redirect('/apply');
+  return { redirectTo: '/apply' };
 }
 
 /**
@@ -174,7 +172,7 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
 
   // AUTH-06: five attempts per account per 15 minutes, plus IP throttling.
   if (!rateLimit(`login-ip:${ip}`, 30, 15 * 60_000).allowed) {
-    redirect('/login/locked');
+    return { redirectTo: '/login/locked' };
   }
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -185,7 +183,7 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
   const GENERIC = { error: 'Those details do not match an account. Check them and try again.' };
 
   if (!user || !user.passwordHash) return GENERIC;
-  if (user.lockedUntil && user.lockedUntil > new Date()) redirect('/login/locked');
+  if (user.lockedUntil && user.lockedUntil > new Date()) return { redirectTo: '/login/locked' };
 
   if (!(await verifyPassword(user.passwordHash, password))) {
     const failed = user.failedLoginCount + 1;
@@ -203,7 +201,7 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
       subjectId: user.id,
       detail: { attempt: failed },
     });
-    if (lockFor) redirect('/login/locked');
+    if (lockFor) return { redirectTo: '/login/locked' };
     return GENERIC;
   }
 
@@ -238,16 +236,15 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
     subjectId: user.id,
   });
 
-  // Same reason as above: every authenticated route was prefetched while
-  // logged out, and those payloads all redirect to /login.
-  revalidatePath('/', 'layout');
-
-  if (needsMfa && !user.totpConfirmedAt) redirect('/security/2fa/setup');
-  if (needsMfa) redirect('/login/2fa');
-  if (!user.emailVerifiedAt) redirect('/signup/verify');
-  redirect(user.status === 'student' || user.status === 'alumni' ? '/dashboard' : '/apply');
+  if (needsMfa && !user.totpConfirmedAt) return { redirectTo: '/security/2fa/setup' };
+  if (needsMfa) return { redirectTo: '/login/2fa' };
+  if (!user.emailVerifiedAt) return { redirectTo: '/signup/verify' };
+  return {
+    redirectTo: user.status === 'student' || user.status === 'alumni' ? '/dashboard' : '/apply',
+  };
 }
 
+/** Server-action sign-out. The HTML form path lives in /api/logout. */
 export async function logOut() {
   // `currentPrincipal`, not `requireUser`: signing out when already signed out
   // must be a no-op, and `requireUser` signals "no session" by calling
@@ -258,7 +255,6 @@ export async function logOut() {
   const me = await currentPrincipal();
   if (me) await audit({ action: 'auth.logout', actorId: me.userId, subjectId: me.userId });
   await destroyCurrentSession();
-  revalidatePath('/', 'layout');
   redirect('/login');
 }
 
@@ -389,5 +385,5 @@ export async function submitNewPassword(_prev: FormState, form: FormData): Promi
     String(form.get('confirm') ?? ''),
   );
   if ('error' in result) return result;
-  redirect('/login?set=1');
+  return { redirectTo: '/login?set=1' };
 }

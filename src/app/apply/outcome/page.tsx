@@ -8,7 +8,8 @@ import { requireInstitution } from '@/lib/tenant';
 import { acceptOffer } from '@/modules/payments/actions';
 import { tuitionCart } from '@/modules/payments/fees';
 import { TopBar, Footer } from '@/components/shell';
-import { Banner, Button, DataString, LinkButton, Naira, Record } from '@/components/ui';
+import { Banner, DataString, LinkButton, Naira, Record } from '@/components/ui';
+import { ActionButton } from '@/components/action-button';
 
 /**
  * AP-10 admission outcome, including the offer countdown (§5.5).
@@ -91,9 +92,7 @@ export default async function OutcomePage() {
 
             {app.status === 'admitted' ? (
               <div className="mt-16 flex flex-wrap gap-4">
-                <form action={acceptOffer}>
-                  <Button type="submit">Accept and pay</Button>
-                </form>
+                <ActionButton action={acceptOffer} label="Accept and pay" pendingLabel="Accepting" />
                 <Link
                   href="/apply"
                   className="t-body-sm self-center text-ink-700 underline underline-offset-2"

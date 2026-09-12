@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Banner, Button, Field, Select, Textarea } from './ui';
 import type { ActionState } from './form';
 import { issueDecision, raiseDocumentQuery } from '@/modules/admissions/registry-actions';
@@ -77,7 +78,14 @@ export function DecisionPanel({
     issueDecision,
     undefined,
   );
+  const router = useRouter();
   const [decision, setDecision] = useState('admitted');
+
+  // Same reason as ActionForm: an action driven by useActionState cannot
+  // redirect server-side, so it hands back a destination instead.
+  useEffect(() => {
+    if (state?.redirectTo) router.push(state.redirectTo);
+  }, [state?.redirectTo, router]);
   const [confirming, setConfirming] = useState(false);
 
   const consequence = {

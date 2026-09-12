@@ -7,7 +7,8 @@ import { completeness, getOrCreateApplication, REQUIRED_DOCUMENTS } from '@/modu
 import { submitApplication } from '@/modules/admissions/actions';
 import { feeFor } from '@/modules/payments/fees';
 import { ApplyShell } from '@/components/apply-shell';
-import { Banner, Button, Naira, Record } from '@/components/ui';
+import { Banner, Naira, Record } from '@/components/ui';
+import { ActionButton } from '@/components/action-button';
 
 /**
  * AP-08. The one place the non-refundable nature of the application fee is
@@ -114,11 +115,14 @@ export default async function ReviewPage() {
         </div>
       )}
 
-      <form action={submitApplication} className="mt-16">
-        <Button type="submit" disabled={state.outstanding.length > 0} className="min-w-[220px]">
-          Submit and pay {fee ? `₦${(fee.amountKobo / 100).toLocaleString('en-NG')}` : ''}
-        </Button>
-      </form>
+      <div className="mt-16">
+        <ActionButton
+          action={submitApplication}
+          disabled={state.outstanding.length > 0}
+          label={`Submit and pay ${fee ? `₦${(fee.amountKobo / 100).toLocaleString('en-NG')}` : ''}`.trim()}
+          pendingLabel="Submitting"
+        />
+      </div>
     </ApplyShell>
   );
 }

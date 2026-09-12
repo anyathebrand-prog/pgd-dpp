@@ -17,6 +17,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
+import postgres from 'postgres';
+import 'dotenv/config';
 
 // Subdomain host, set as baseURL in playwright.config.ts. Routes are plain
 // absolute paths, exactly as the application emits them in redirects.
@@ -24,7 +26,11 @@ const TENANT = '';
 const MAIL_DIR = join(process.cwd(), '.mail');
 const PASSWORD = 'Correct-Horse-42';
 
-const candidate = `e2e-candidate-${Date.now()}@example.ng`;
+const RUN = Date.now();
+const candidate = `e2e-candidate-${RUN}@example.ng`;
+// Unique per run. Leftover rows from earlier runs share the registry queue, so
+// a fixed name makes the row locator ambiguous the second time the suite runs.
+const candidateName = `Amaka Eze ${RUN}`;
 
 /** Reads the most recent message sent to an address and pulls out a 6-digit code. */
 function latestOtp(to: string): string {
@@ -40,6 +46,19 @@ function latestOtp(to: string): string {
   return code!;
 }
 
+/**
+ * The seed leaves registry staff without TOTP so the enrolment screen is
+ * exercised on first login. A previous run leaves them enrolled, so reset to
+ * the seeded state rather than branching the test on which screen appears.
+ */
+test.beforeAll(async () => {
+  const sql = postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
+  await sql`
+    UPDATE users SET totp_secret = NULL, totp_confirmed_at = NULL
+    WHERE email = 'registry@unilag.example.ng'`;
+  await sql.end();
+});
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('a candidate goes from discovery to enrolled', () => {
@@ -47,7 +66,7 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     await page.goto(`${TENANT}/signup`);
     await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
 
-    await page.getByLabel(/Full name/).fill('Amaka Eze');
+    await page.getByLabel(/Full name/).fill(candidateName);
     await page.getByLabel(/Email address/).fill(candidate);
     await page.getByLabel(/^Password/).fill(PASSWORD);
     await page.getByRole('button', { name: 'Create account' }).click();
@@ -58,15 +77,7 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     await page.getByLabel(/Verification code/).fill(latestOtp(candidate));
     await page.getByRole('button', { name: 'Verify email' }).click();
 
-    // KNOWN DEFECT: the action's redirect target is honoured by the server
-    // (`x-action-redirect: /apply`) but the client router settles on `/`
-    // instead, with no console error. `/apply` itself is fine — a normal link
-    // click reaches it, and a direct request returns 200. So the account is
-    // verified and signed in; it simply lands one click away from where it
-    // should. Navigating explicitly here keeps the rest of the journey under
-    // test rather than blocking it on a routing quirk.
-    await page.waitForLoadState('networkidle');
-    await page.goto('/apply');
+    await page.waitForURL('**/apply', { timeout: 30_000 });
 
     // APP-07: the tracker is the first thing a verified candidate sees.
     await expect(page.getByRole('heading', { name: 'Your application' })).toBeVisible();
@@ -77,7 +88,7 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     await login(page);
     await page.goto(`${TENANT}/apply/personal`);
 
-    await page.getByLabel('Full name (required)').fill('Amaka Eze');
+    await page.getByLabel('Full name (required)').fill(candidateName);
     await page.getByLabel(/Date of birth/).fill('1993-07-19');
     await page.getByLabel(/Gender/).selectOption('female');
     await page.getByLabel(/Phone number/).fill('08061234567');
@@ -105,7 +116,7 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     // APP-03: go back and confirm the autosave actually landed, rather than
     // trusting that the redirect implied a write.
     await page.goto(`${TENANT}/apply/personal`);
-    await expect(page.getByLabel('Full name (required)')).toHaveValue('Amaka Eze');
+    await expect(page.getByLabel('Full name (required)')).toHaveValue(candidateName);
     await expect(page.getByLabel(/State of origin/)).toHaveValue('Anambra');
   });
 
@@ -191,9 +202,10 @@ test.describe('a candidate goes from discovery to enrolled', () => {
 
     // Derive a live code from the displayed secret, the way an app would.
     const secret = (await page.locator('p.t-data').first().textContent())!.trim();
-    const { totpValid } = await import('../src/modules/auth/totp');
+    // Computed locally rather than imported from src: the TOTP module is
+    // marked `server-only`, and the point here is to behave like a real
+    // authenticator app anyway.
     const code = await currentTotp(secret);
-    expect(totpValid(secret, code), 'generated code does not verify').toBe(true);
 
     await page.getByLabel(/Code from your authenticator app/).fill(code);
     await page.getByRole('button', { name: 'Confirm and continue' }).click();
@@ -201,11 +213,11 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     await page.goto(`${TENANT}/admin/applications`);
     await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
 
-    const row = page.locator('tr', { hasText: 'Amaka Eze' });
+    const row = page.locator('tr', { hasText: candidateName });
     await expect(row).toBeVisible();
     await row.getByRole('link', { name: /Review/ }).click();
 
-    await expect(page.getByRole('heading', { name: 'Amaka Eze' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: candidateName })).toBeVisible();
     // CMP-13: documents are reachable only through expiring signed links.
     await expect(page.getByRole('link', { name: /Open .*\.pdf/ }).first()).toBeVisible();
 
@@ -243,7 +255,7 @@ test.describe('a candidate goes from discovery to enrolled', () => {
   test('the enrolled student can reach the programme', async ({ page }) => {
     await login(page);
     await page.goto(`${TENANT}/dashboard`);
-    await expect(page.getByRole('heading', { name: 'Amaka Eze' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: candidateName })).toBeVisible();
     await expect(page.getByText(/UNILAG\/DPP\/\d{4}\//)).toBeVisible();
 
     await page.goto(`${TENANT}/programme`);
@@ -258,16 +270,7 @@ async function login(page: import('@playwright/test').Page) {
   await page.getByLabel(/Email address/).fill(candidate);
   await page.getByLabel(/^Password/).fill(PASSWORD);
   await page.getByRole('button', { name: 'Log in' }).click();
-
-  // Same known redirect defect as after verification: the session is
-  // established but the client router settles on `/`, so there is no URL to
-  // wait on. Wait for the session cookie itself — that is the thing the next
-  // navigation actually depends on.
-  await expect
-    .poll(async () => (await page.context().cookies()).some((c) => c.name === 'pgd_session'), {
-      timeout: 20_000,
-    })
-    .toBe(true);
+  await page.waitForURL(/\/(apply|dashboard)/, { timeout: 30_000 });
 }
 
 /** Generates the code an authenticator app would show for this secret, now. */

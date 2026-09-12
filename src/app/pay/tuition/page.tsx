@@ -6,7 +6,8 @@ import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { tuitionCart } from '@/modules/payments/fees';
 import { startTuitionCheckout } from '@/modules/payments/actions';
-import { Banner, Button, Naira, Record } from '@/components/ui';
+import { Banner, Naira, Record } from '@/components/ui';
+import { ActionButton } from '@/components/action-button';
 
 /**
  * PY-05. PAY-01's cart: acceptance fee, tuition and whatever mandatory levies
@@ -63,11 +64,13 @@ export default async function TuitionCheckout() {
         </Banner>
       </div>
 
-      <form action={startTuitionCheckout} className="mt-16">
-        <Button type="submit" className="min-w-[240px]">
-          Pay ₦{(cart.totalKobo / 100).toLocaleString('en-NG')} and enrol
-        </Button>
-      </form>
+      <div className="mt-16">
+        <ActionButton
+          action={startTuitionCheckout}
+          label={`Pay ₦${(cart.totalKobo / 100).toLocaleString('en-NG')} and enrol`}
+          pendingLabel="Opening checkout"
+        />
+      </div>
     </main>
   );
 }

@@ -7,7 +7,8 @@ import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { feeFor } from '@/modules/payments/fees';
 import { startApplicationFeeCheckout } from '@/modules/payments/actions';
-import { Banner, Button, Naira, Record } from '@/components/ui';
+import { Banner, Naira, Record } from '@/components/ui';
+import { ActionButton } from '@/components/action-button';
 
 /**
  * PY-01. §7: a checkout screen states the amount, what it buys, and what
@@ -52,11 +53,13 @@ export default async function ApplicationCheckout() {
         platform — we never see or store them.
       </p>
 
-      <form action={startApplicationFeeCheckout} className="mt-16">
-        <Button type="submit" className="min-w-[220px]">
-          Pay ₦{(fee.amountKobo / 100).toLocaleString('en-NG')}
-        </Button>
-      </form>
+      <div className="mt-16">
+        <ActionButton
+          action={startApplicationFeeCheckout}
+          label={`Pay ₦${(fee.amountKobo / 100).toLocaleString('en-NG')}`}
+          pendingLabel="Opening checkout"
+        />
+      </div>
 
       <p className="t-body-sm mt-6">
         <Link href="/apply" className="text-ink-700 underline underline-offset-2">

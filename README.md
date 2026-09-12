@@ -194,30 +194,38 @@ npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- 
 
 ## Known defects
 
-**Server-action redirects land on `/` when served from a tenant subdomain.** After any action
-that redirects — verify email, log in, "Save and continue" on an application step — the server
-returns the correct target (`x-action-redirect: /apply`) and the action's writes commit, but the
-client router settles on the tenant home instead. There is no console error. The destination route
-is fine: a normal link click reaches it, and a direct request returns 200. The same action redirect
-works correctly on the platform host (`localhost:3000`), so it is specific to the subdomain.
+**A production build returns 500 on server actions that authenticate.** `next start` throws
+``headers` was called outside a request scope`` on the login action. Everything else in a
+production build is fine — every page returns 200 on both the platform host and a tenant
+subdomain, and a server action that touches neither auth nor tenancy (`/verify`) redirects
+correctly on both. `npm run dev` is unaffected and the whole funnel passes against it.
 
-Practical effect: a candidate stays signed in and keeps their saved work, but is dropped on the
-tenant home after every step instead of being carried to the next one. The funnel is navigable but
-not usable as intended, so this is the first thing to fix.
+What has been ruled out, so nobody repeats it: middleware (a full pass-through still fails),
+`revalidatePath`, React `cache()` around the tenant helpers, the order of `headers()` relative to
+`cookies().set()`, and the subdomain itself. The stack trace names a route handler
+(`/api/files`, `/api/logout`) that is not involved in the flow and changes between builds, so it is
+chunk attribution rather than the real caller. One genuine instance of the underlying pattern was
+found and fixed — `logOut()` caught the redirect thrown by `requireUser()`, and `/api/logout` now
+avoids calling a server action from a route handler entirely.
 
-**A production build returns 500 on the same flows**, with ``headers` was called outside a request
-scope`` traced into a route handler (`/api/files`, `/api/logout` — it moves between runs). One
-genuine cause was found and fixed: `logOut()` did `await requireUser().catch(() => null)`, and
-since `requireUser` signals "no session" by calling `redirect()` — which works by throwing —
-the catch swallowed it and let the handler run past the end of the request. Rebuilding still
-reproduces the error elsewhere, so at least one more instance of this pattern remains.
+The most promising next step is the structural one: stop calling `headers()` from deep inside
+business logic. `audit()` and `createSession()` each reach for it independently; capturing the IP
+and user-agent once at the action entry and passing them down would remove the whole class of
+error rather than chase instances of it.
 
-Both are almost certainly the same root cause. **Do not deploy until they are resolved**; `npm run
-dev` on the platform host is the only fully-exercised configuration.
+**Do not deploy until this is resolved.**
 
-`/t/{slug}` path-based tenancy is browse-only for the same family of reasons: server actions
-redirect to absolute paths like `/apply`, which lose the tenant prefix. Subdomains are the
-supported mechanism.
+`/t/{slug}` path-based tenancy is browse-only: server actions return absolute destinations like
+`/apply`, which lose the tenant prefix. Subdomains are the supported mechanism.
+
+## One rule worth knowing before editing an action
+
+**Server actions never call `redirect()`.** They return `{ redirectTo }` and the client navigates —
+`ActionForm` and `ActionButton` both do this. A server-side `redirect()` from an action runs the
+action correctly, commits its writes, and then lands the router on `/`. Rather than remember which
+call sites are affected, every action in the codebase follows the same rule. `redirect()` remains
+correct during *page* render, which is how `requireUser`, `requireRole` and `requireInstitution`
+work.
 
 ## What is not built
 

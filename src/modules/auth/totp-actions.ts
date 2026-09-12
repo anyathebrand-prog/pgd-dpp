@@ -32,7 +32,7 @@ export async function confirmTotpEnrolment(_prev: FormState, form: FormData): Pr
   await db.update(users).set({ totpConfirmedAt: new Date() }).where(eq(users.id, me.userId));
   await db.update(sessions).set({ mfaSatisfied: true }).where(eq(sessions.id, me.sessionId));
   await audit({ action: 'auth.totp_enrolled', actorId: me.userId, subjectId: me.userId });
-  redirect('/admin');
+  return { redirectTo: '/admin' };
 }
 
 /** AU-08 challenge. */
@@ -45,7 +45,7 @@ export async function verifyTotp(_prev: FormState, form: FormData): Promise<Form
   }
 
   const [user] = await db.select().from(users).where(eq(users.id, me.userId)).limit(1);
-  if (!user?.totpSecret || !user.totpConfirmedAt) redirect('/security/2fa/setup');
+  if (!user?.totpSecret || !user.totpConfirmedAt) return { redirectTo: '/security/2fa/setup' };
 
   if (!totpValid(user.totpSecret, String(form.get('code') ?? ''))) {
     await audit({ action: 'auth.totp_failed', actorId: me.userId, subjectId: me.userId });
@@ -54,5 +54,5 @@ export async function verifyTotp(_prev: FormState, form: FormData): Promise<Form
 
   await db.update(sessions).set({ mfaSatisfied: true }).where(eq(sessions.id, me.sessionId));
   await audit({ action: 'auth.totp_ok', actorId: me.userId, subjectId: me.userId });
-  redirect('/admin');
+  return { redirectTo: '/admin' };
 }

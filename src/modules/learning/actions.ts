@@ -188,7 +188,7 @@ export async function submitAttempt(_prev: FormState, form: FormData): Promise<F
     entityId: assessmentId,
   });
 
-  redirect(`/assessment/${assessmentId}/result`);
+  return { redirectTo: `/assessment/${assessmentId}/result` };
 }
 
 /* --------------------------------------------------------------------- FC-03 */

@@ -67,7 +67,7 @@ export async function saveStep(_prev: FormState, form: FormData): Promise<FormSt
   });
 
   const next = { personal: '/apply/education', education: '/apply/experience', experience: '/apply/documents' }[step];
-  redirect(next);
+  return { redirectTo: next };
 }
 
 /* --------------------------------------------------------------------- AP-05 */
@@ -176,7 +176,7 @@ export async function saveConsent(_prev: FormState, form: FormData): Promise<For
     detail: { noticeVersion: version },
   });
 
-  redirect('/apply/review');
+  return { redirectTo: '/apply/review' };
 }
 
 /* --------------------------------------------------------------------- AP-08 */
@@ -187,7 +187,7 @@ export async function saveConsent(_prev: FormState, form: FormData): Promise<For
  * the candidate got here. This action does not mark anything paid — it hands
  * off to checkout, and the webhook decides (PAY-03).
  */
-export async function submitApplication(): Promise<void> {
+export async function submitApplication(_prev: FormState, _form: FormData): Promise<FormState> {
   const { me, institution, app } = await myApplication();
 
   const granted = await db
@@ -197,7 +197,7 @@ export async function submitApplication(): Promise<void> {
   const consented = new Set(granted.filter((g) => g.granted).map((g) => g.purpose));
 
   const state = await completeness(app, consented);
-  if (state.outstanding.length > 0) redirect('/apply/review');
+  if (state.outstanding.length > 0) return { redirectTo: '/apply/review' };
 
   await withTenant(institution.id, (tx) =>
     tx
@@ -215,5 +215,5 @@ export async function submitApplication(): Promise<void> {
     entityId: app.id,
   });
 
-  redirect('/pay/application');
+  return { redirectTo: '/pay/application' };
 }
