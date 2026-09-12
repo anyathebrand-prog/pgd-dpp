@@ -22,7 +22,8 @@
     "pg:stop": "node scripts/pg.mjs stop",
     "pg:status": "node scripts/pg.mjs status",
     "pg:destroy": "node scripts/pg.mjs destroy",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:prod": "playwright test --config=playwright.prod.config.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",

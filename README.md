@@ -192,31 +192,27 @@ npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- 
 
 ---
 
-## Known defects
-
-**A production build returns 500 on server actions that authenticate.** `next start` throws
-``headers` was called outside a request scope`` on the login action. Everything else in a
-production build is fine — every page returns 200 on both the platform host and a tenant
-subdomain, and a server action that touches neither auth nor tenancy (`/verify`) redirects
-correctly on both. `npm run dev` is unaffected and the whole funnel passes against it.
-
-What has been ruled out, so nobody repeats it: middleware (a full pass-through still fails),
-`revalidatePath`, React `cache()` around the tenant helpers, the order of `headers()` relative to
-`cookies().set()`, and the subdomain itself. The stack trace names a route handler
-(`/api/files`, `/api/logout`) that is not involved in the flow and changes between builds, so it is
-chunk attribution rather than the real caller. One genuine instance of the underlying pattern was
-found and fixed — `logOut()` caught the redirect thrown by `requireUser()`, and `/api/logout` now
-avoids calling a server action from a route handler entirely.
-
-The most promising next step is the structural one: stop calling `headers()` from deep inside
-business logic. `audit()` and `createSession()` each reach for it independently; capturing the IP
-and user-agent once at the action entry and passing them down would remove the whole class of
-error rather than chase instances of it.
-
-**Do not deploy until this is resolved.**
+## Known limitations
 
 `/t/{slug}` path-based tenancy is browse-only: server actions return absolute destinations like
 `/apply`, which lose the tenant prefix. Subdomains are the supported mechanism.
+
+A handful of links point at screens that are not built yet — `/account`, `/alumni`,
+`/library/takedown`, `/admin/cohorts`, `/admin/fees`, `/admin/reconciliation`, `/apply/letter`, and
+the DPO sub-pages. They 404 rather than misbehave.
+
+## Testing against a production build
+
+`next dev` and `next start` share the `.next` directory. Running them together lets the dev server
+rewrite chunks underneath live production requests, which produces spurious 500s with stack traces
+pointing at route handlers that are not involved in the request at all. That cost real time to
+diagnose once, so the production config deliberately starts no server of its own:
+
+```bash
+npm run build
+npx next start -p 3100      # and nothing else touching .next
+npm run test:e2e:prod       # the same funnel suite, against the real build
+```
 
 ## One rule worth knowing before editing an action
 
