@@ -90,7 +90,9 @@ test.beforeAll(async ({ browser, baseURL }) => {
   await seed.end();
 
   mkdirSync(join(process.cwd(), '.auth'), { recursive: true });
-  const context = await browser.newContext({ baseURL });
+  // storageState must be cleared explicitly: newContext inherits the
+  // describe-level `use`, so it would try to read the file this is creating.
+  const context = await browser.newContext({ baseURL, storageState: undefined });
   const page = await context.newPage();
 
   await page.goto('/login');
@@ -101,6 +103,9 @@ test.beforeAll(async ({ browser, baseURL }) => {
   await expect(page.getByRole('heading', { name: 'Set up your authenticator' })).toBeVisible({
     timeout: 30_000,
   });
+  // Wait for hydration: this form is a client component bound to a server
+  // action, and a click that lands first is swallowed with no request at all.
+  await page.waitForLoadState('networkidle');
   const secret = (await page.locator('p.t-data').first().textContent())!.trim();
   await page.locator('#code').fill(await currentTotp(secret));
   await page.getByRole('button', { name: 'Confirm and continue' }).click();

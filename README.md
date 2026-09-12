@@ -144,7 +144,15 @@ Two deliberate departures from the brief, both flagged in the PRD itself:
   not collected unless a specific university mandates it, at which point it becomes a
   tenant-configured field with its own lawful basis and its own RoPA line.
 
-### 4. The design system is semantic
+### 4. The design system is semantic, and enforced
+
+Institution branding is validated and **blocked**, not warned about. A brand colour has to reach
+4.5:1 against the page or it cannot be saved, and the screen offers the nearest passing shade of
+the same hue rather than pushing an institution toward a colour they will not recognise. §2.5 is
+explicit — "do not warn-and-allow" — because the platform's accessibility compliance cannot depend
+on a university administrator's colour taste. `tests/contrast.test.ts` checks the maths against
+every ratio published in §2.4.
+
 
 "The Case File": **Paper** is interface, **Manila** is the record. Manila appears if and only if the
 thing on screen is a filed artefact. There are exactly two card types — `Record` (Manila) and
@@ -199,8 +207,14 @@ npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- 
 `/apply`, which lose the tenant prefix. Subdomains are the supported mechanism.
 
 A handful of links point at screens that are not built yet — `/account`, `/alumni`,
-`/library/takedown`, `/admin/cohorts`, `/admin/fees`, `/admin/reconciliation`, `/dpo/evidence` and
-`/dpo/snag`. They 404 rather than misbehave.
+`/library/takedown`, `/admin/payouts`, `/admin/programme`, `/dpo/evidence` and `/dpo/snag`. They
+404 rather than misbehave.
+
+**Fee versioning is an open product question (app flow G-19).** Changing a fee changes what
+candidates mid-application are charged at checkout. Anyone who has already paid is unaffected —
+`transaction_lines` snapshots the amount taken — and the fee screen states how many people are
+exposed before you save, but there is no mechanism to honour a quote. The PRD does not settle
+this, so neither does the code.
 
 ## Testing against a production build
 

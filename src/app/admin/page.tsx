@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { withTenant } from '@/db';
-import { applications, cohorts, transactions } from '@/db/schema';
+import { applications, cohorts, feeItems, modules, transactions } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { Banner, Naira, Panel, cx } from '@/components/ui';
@@ -58,6 +58,60 @@ export default async function AdminHome() {
       .where(inArray(transactions.status, ['pending', 'awaiting_approval'])),
   );
 
+  // IA-01: the setup checklist. An institution that has not configured a
+  // payout account cannot take money, and the flow is explicit that this must
+  // be obvious here rather than discovered at checkout.
+  const fees = await withTenant(institution.id, (tx) =>
+    tx.select().from(feeItems).where(eq(feeItems.institutionId, institution.id)),
+  );
+  const publishedModules = await withTenant(institution.id, (tx) =>
+    tx.select({ n: sql<number>`count(*)::int` }).from(modules).where(eq(modules.published, true)),
+  );
+
+  const setup = [
+    {
+      label: 'Application fee set',
+      done: fees.some((f) => f.kind === 'application'),
+      href: '/admin/fees',
+      why: 'Nobody can submit an application until this exists — the submit step charges it.',
+    },
+    {
+      label: 'Tuition set',
+      done: fees.some((f) => f.kind === 'tuition'),
+      href: '/admin/fees',
+      why: 'An admitted candidate cannot accept their offer without a price to pay.',
+    },
+    {
+      label: 'An intake is open',
+      done: intakes.length > 0,
+      href: '/admin/cohorts',
+      why: 'Your programme page shows nothing to apply to while every intake is draft or closed.',
+    },
+    {
+      label: 'Payout account configured',
+      done: Boolean(institution.paystackSubaccountCode),
+      href: '/admin/payouts',
+      why: 'Without a verified subaccount, money collected has nowhere to settle to. This blocks taking payment at all.',
+      blocking: true,
+    },
+    {
+      label: 'Branding set',
+      done: institution.brandColour !== '#6B2436',
+      href: '/admin/branding',
+      why: 'Optional. Your admission letters carry the platform default until you set a colour.',
+      optional: true,
+    },
+    {
+      label: 'A module is published',
+      done: Number(publishedModules[0]?.n ?? 0) > 0,
+      href: '/admin/programme',
+      why: 'Enrolled students see an empty programme until something is published.',
+    },
+  ];
+
+  const blocking = setup.filter((s) => s.blocking && !s.done);
+  const outstanding = setup.filter((s) => !s.done && !s.optional && !s.blocking);
+
   return (
     <>
       <h1 className="t-h1 m-0 text-ink-900">{institution.name}</h1>
@@ -65,6 +119,23 @@ export default async function AdminHome() {
         Admissions, fees and settlement for the Post Graduate Diploma in Data Protection &amp;
         Privacy.
       </p>
+
+      {blocking.length > 0 ? (
+        <div className="mb-8">
+          <Banner tone="danger" title="This institution cannot take payment yet">
+            <ul className="m-0 list-disc pl-5">
+              {blocking.map((s) => (
+                <li key={s.label}>
+                  <Link href={s.href} className="text-ink-900 underline underline-offset-2">
+                    {s.label}
+                  </Link>{' '}
+                  — {s.why}
+                </li>
+              ))}
+            </ul>
+          </Banner>
+        </div>
+      ) : null}
 
       {oldestDays >= 10 ? (
         <div className="mb-8">
@@ -130,6 +201,44 @@ export default async function AdminHome() {
           ) : null}
         </Panel>
       </div>
+
+      <h2 className="t-h2 mt-12 mb-4 text-ink-900">Setup</h2>
+      <ul className="m-0 grid list-none gap-2 p-0 md:grid-cols-2">
+        {setup.map((s) => (
+          <li
+            key={s.label}
+            className={cx(
+              'flex items-start gap-3 rounded-sm border p-3',
+              s.done ? 'border-ink-300' : s.blocking ? 'border-danger' : 'border-ink-300',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cx('t-body-sm', s.done ? 'text-verified-text' : 'text-ink-500')}
+            >
+              {s.done ? '✓' : '—'}
+            </span>
+            <span>
+              <Link
+                href={s.href}
+                className={cx(
+                  't-body-sm no-underline',
+                  s.done ? 'text-ink-700' : 'font-semibold text-ink-900 underline underline-offset-2',
+                )}
+              >
+                {s.label}
+                {s.optional && !s.done ? ' (optional)' : ''}
+              </Link>
+              {!s.done ? <span className="t-caption block text-ink-700">{s.why}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {outstanding.length === 0 && blocking.length === 0 ? (
+        <p className="t-body-sm mt-4 text-verified-text">
+          Setup is complete. Candidates can apply, pay, and be admitted.
+        </p>
+      ) : null}
 
       <h2 className="t-h2 mt-12 mb-4 text-ink-900">Open intakes</h2>
       <div className="overflow-x-auto">
