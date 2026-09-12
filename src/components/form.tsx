@@ -98,8 +98,14 @@ export function ActionForm({
  */
 export function CodeField({ name = 'code', label }: { name?: string; label: string }) {
   return (
-    <fieldset className="m-0 border-0 p-0">
-      <legend className="t-label mb-2 p-0 text-ink-900">{label}</legend>
+    // A single control, so it takes a real <label for>. A <legend> names the
+    // fieldset rather than the input inside it, which leaves the field itself
+    // with no accessible name — it reads as "edit text, blank" to a screen
+    // reader, on the one screen where getting the value right matters most.
+    <div>
+      <label htmlFor={name} className="t-label mb-2 block text-ink-900">
+        {label}
+      </label>
       <input
         id={name}
         name={name}
@@ -114,6 +120,6 @@ export function CodeField({ name = 'code', label }: { name?: string; label: stri
       <p id={`${name}-helper`} className="t-body-sm mt-1.5 text-ink-500">
         Six digits. It expires 15 minutes after it was sent.
       </p>
-    </fieldset>
+    </div>
   );
 }

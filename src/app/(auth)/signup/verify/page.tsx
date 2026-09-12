@@ -39,11 +39,17 @@ export default async function VerifyPage({
         action={verifyEmail}
         submitLabel="Verify email"
         secondary={
-          <form action={resendOtp}>
-            <button className="t-body-sm text-ink-700 underline underline-offset-2">
-              Send a new code
-            </button>
-          </form>
+          // A second action on the same form, not a nested <form>. Nesting is
+          // invalid HTML: the browser drops the inner form, React reports a
+          // hydration error, and the client router stops handling the
+          // surrounding action's redirect correctly.
+          <button
+            formAction={resendOtp}
+            formNoValidate
+            className="t-body-sm text-ink-700 underline underline-offset-2"
+          >
+            Send a new code
+          </button>
         }
       >
         <CodeField label="Verification code" />

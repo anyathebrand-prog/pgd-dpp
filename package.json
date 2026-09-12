@@ -21,7 +21,8 @@
     "pg:start": "node scripts/pg.mjs start",
     "pg:stop": "node scripts/pg.mjs stop",
     "pg:status": "node scripts/pg.mjs status",
-    "pg:destroy": "node scripts/pg.mjs destroy"
+    "pg:destroy": "node scripts/pg.mjs destroy",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@embedded-postgres/windows-x64": "^16.14.0-beta.17",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",

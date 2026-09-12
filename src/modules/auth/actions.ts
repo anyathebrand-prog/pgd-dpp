@@ -2,12 +2,14 @@
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { authTokens, memberships, users } from '@/db/schema';
 import {
   clientIp,
   createSession,
+  currentPrincipal,
   destroyCurrentSession,
   passwordProblem,
   requireUser,
@@ -91,6 +93,7 @@ export async function signUp(_prev: FormState, form: FormData): Promise<FormStat
 
   // A session before verification, so the pending screen knows who is waiting.
   await createSession(userId, { institutionId: institution.id });
+  revalidatePath('/', 'layout');
   redirect('/signup/verify');
 }
 
@@ -235,6 +238,10 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
     subjectId: user.id,
   });
 
+  // Same reason as above: every authenticated route was prefetched while
+  // logged out, and those payloads all redirect to /login.
+  revalidatePath('/', 'layout');
+
   if (needsMfa && !user.totpConfirmedAt) redirect('/security/2fa/setup');
   if (needsMfa) redirect('/login/2fa');
   if (!user.emailVerifiedAt) redirect('/signup/verify');
@@ -242,9 +249,16 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
 }
 
 export async function logOut() {
-  const me = await requireUser().catch(() => null);
+  // `currentPrincipal`, not `requireUser`: signing out when already signed out
+  // must be a no-op, and `requireUser` signals "no session" by calling
+  // `redirect()`, which works by throwing. Catching that swallows the redirect
+  // and leaves the handler running past the point Next considers the request
+  // finished — which surfaces as "`headers` was called outside a request
+  // scope" in a production build.
+  const me = await currentPrincipal();
   if (me) await audit({ action: 'auth.logout', actorId: me.userId, subjectId: me.userId });
   await destroyCurrentSession();
+  revalidatePath('/', 'layout');
   redirect('/login');
 }
 

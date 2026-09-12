@@ -98,7 +98,11 @@ export async function settleTransaction(params: {
       if (app && app.status === 'offer_accepted') {
         const [cohort] = await tx.select().from(cohorts).where(eq(cohorts.id, app.cohortId)).limit(1);
         const year = (cohort?.startsAt ?? new Date()).getFullYear();
-        matricNumber = `${institution?.shortName?.replace(/[^A-Z]/gi, '').toUpperCase().slice(0, 4) ?? 'PGD'}/DPP/${year}/${humanCode(5)}`;
+        // The institution's own abbreviation, in full. An arbitrary truncation
+        // turns UNILAG into UNIL, which is not what any registrar writes and
+        // would not match the format on the rest of the student's records.
+        const code = institution?.shortName?.replace(/[^A-Z]/gi, '').toUpperCase() || 'PGD';
+        matricNumber = `${code}/DPP/${year}/${humanCode(5)}`;
 
         await tx.insert(enrollments).values({
           institutionId: txn.institutionId,

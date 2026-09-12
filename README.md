@@ -186,11 +186,38 @@ tests/isolation.test.ts    §7.4 "the non-negotiable test"
 npm run dev                 npm run build           npm run typecheck
 npm run db:up               npm run db:reset        npm run db:rls
 npm run pg:start            npm run pg:stop         npm run pg:status     npm run pg:destroy
-npm run test                npm run test:isolation
+npm run test                npm run test:isolation   npm run test:e2e
 npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- reconcile
 ```
 
 ---
+
+## Known defects
+
+**Server-action redirects land on `/` when served from a tenant subdomain.** After any action
+that redirects — verify email, log in, "Save and continue" on an application step — the server
+returns the correct target (`x-action-redirect: /apply`) and the action's writes commit, but the
+client router settles on the tenant home instead. There is no console error. The destination route
+is fine: a normal link click reaches it, and a direct request returns 200. The same action redirect
+works correctly on the platform host (`localhost:3000`), so it is specific to the subdomain.
+
+Practical effect: a candidate stays signed in and keeps their saved work, but is dropped on the
+tenant home after every step instead of being carried to the next one. The funnel is navigable but
+not usable as intended, so this is the first thing to fix.
+
+**A production build returns 500 on the same flows**, with ``headers` was called outside a request
+scope`` traced into a route handler (`/api/files`, `/api/logout` — it moves between runs). One
+genuine cause was found and fixed: `logOut()` did `await requireUser().catch(() => null)`, and
+since `requireUser` signals "no session" by calling `redirect()` — which works by throwing —
+the catch swallowed it and let the handler run past the end of the request. Rebuilding still
+reproduces the error elsewhere, so at least one more instance of this pattern remains.
+
+Both are almost certainly the same root cause. **Do not deploy until they are resolved**; `npm run
+dev` on the platform host is the only fully-exercised configuration.
+
+`/t/{slug}` path-based tenancy is browse-only for the same family of reasons: server actions
+redirect to absolute paths like `/apply`, which lose the tenant prefix. Subdomains are the
+supported mechanism.
 
 ## What is not built
 
