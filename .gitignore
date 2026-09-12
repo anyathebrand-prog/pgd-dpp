@@ -8,3 +8,5 @@ drizzle/meta/_journal.json.bak
 next-env.d.ts
 .pgdata/
 .storage/
+test-results/
+playwright-report/
