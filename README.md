@@ -165,6 +165,17 @@ Paper, and Signal never touches Manila — all three fall out of the contrast ma
 No shadows, no gradients, 2–4px radius throughout, with exactly one circular form: the verification
 seal.
 
+**Motion answers an action.** Three durations (120ms state, 180ms sheet, 240ms page) on one easing
+curve, and nothing exceeds 240ms. No hover lift, no scroll-triggered entrances, no skeleton
+shimmer, no decorative loops — partly taste, partly because paint is expensive on the low-end
+Android this audience actually uses. The redacted mark on the landing page is the single piece of
+motion nobody triggered, and it exists once.
+
+Under `prefers-reduced-motion` transforms go and the hero renders resolved, but progress
+indicators that carry meaning **stay** — the payment bar becomes a static full bar paired with an
+`aria-live` status line, because removing feedback is not an accommodation. `tests/motion.test.ts`
+scans the source and fails on anything from §9's not-permitted list.
+
 Fonts follow the §3.5 budget — Plex Sans 400/600 preloads; Literata loads only on reading surfaces
 (lesson player, library reader, privacy notice); Plex Mono is used only for strings a person might
 read aloud to a support agent.

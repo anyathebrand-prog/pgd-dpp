@@ -72,6 +72,22 @@ export function DocumentSlot({
         </p>
       ) : null}
 
+      {/*
+        §5.5 asks for a determinate bar here. Determinate progress needs the
+        presigned direct-to-R2 upload from §7.6, where an XHR reports bytes
+        sent; this posts through a server action, which exposes no progress
+        events. An indeterminate bar is the honest representation of what we
+        actually know — a determinate one would be animating a number we made
+        up. It becomes a static bar under reduced motion rather than vanishing.
+      */}
+      {pending ? (
+        <div
+          className="bar-indeterminate mt-4 h-1 w-full overflow-hidden bg-ink-100"
+          role="progressbar"
+          aria-label={`Uploading ${label}`}
+        />
+      ) : null}
+
       <form action={formAction} className="mt-4 flex flex-wrap items-center gap-3">
         <input type="hidden" name="kind" value={kind} />
         <input

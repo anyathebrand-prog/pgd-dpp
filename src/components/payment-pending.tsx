@@ -16,6 +16,10 @@ import { useEffect, useState } from 'react';
  *  - The reference is selectable Plex Mono, because the next thing that
  *    happens is someone reading it to a support agent over the phone.
  *  - aria-live="polite" announces the transition for screen reader users.
+ *  - §9: under reduced motion the bar stops animating but is NOT removed —
+ *    it becomes a static full-width bar, and this status line carries the
+ *    state instead. Removing feedback is not an accessibility accommodation,
+ *    least of all on the screen someone reaches straight after paying.
  */
 export function PaymentPending({ reference }: { reference: string }) {
   const [elapsed, setElapsed] = useState(0);

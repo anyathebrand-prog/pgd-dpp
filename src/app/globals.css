@@ -44,6 +44,12 @@
   --font-serif: var(--font-literata), Literata, Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
 
+  /* §9 motion. Nothing in this product exceeds 240ms. */
+  --motion-state: 120ms; /* state change: hover, focus, validation */
+  --motion-sheet: 180ms; /* sheets, accordions */
+  --motion-page: 240ms; /* page and step transitions */
+  --motion-ease: cubic-bezier(0.2, 0, 0.2, 1);
+
   /* §4.3 containers */
   --container-marketing: 1200px;
   --container-app: 1120px;
@@ -212,21 +218,60 @@ body {
 /* ------------------------------------------------------------ motion */
 
 /*
- * §9. Motion is functional only, and it stops entirely for anyone who asks it
- * to. There is no decorative animation in this product — no shimmer, no
- * scale-on-hover — partly on taste and partly because paint is expensive on
- * the low-end Android this audience actually uses.
+ * §9. Motion answers an action.
+ *
+ * Permitted: sheets, accordions, step transitions, upload progress, the
+ * payment bar, validation messages fading in. Not permitted: entrance
+ * animations on scroll, staggered reveals, hover scale or lift, parallax,
+ * skeleton shimmer, animated counters, decorative loops.
+ *
+ * Partly taste and partly arithmetic — paint is expensive on the low-end
+ * Android this audience actually uses, and §8 budgets three seconds to
+ * interactive on 3G.
  */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+
+/* State changes: the one transition most interactive elements need. */
+.motion-state {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: var(--motion-state);
+  transition-timing-function: var(--motion-ease);
+}
+
+/* §9: validation messages fade in over 120ms. They never slide or bounce —
+   an error that moves is harder to read than one that simply appears. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
+.motion-appear {
+  animation: fade-in var(--motion-state) var(--motion-ease) both;
+}
+
+/*
+ * PB-01's redacted hero: the single non-user-triggered motion moment in the
+ * entire system, and it exists once. It draws in and stops. Nothing else in
+ * the product animates without someone having done something first.
+ */
+@keyframes redaction-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.motion-hero-mark {
+  transform-origin: left center;
+  animation: redaction-draw var(--motion-page) var(--motion-ease) both;
+}
+
+/* The payment bar (PY-02) and the upload bar (AP-05). */
 @keyframes indeterminate {
   0% {
     transform: translateX(-100%);
@@ -242,7 +287,48 @@ body {
   width: 25%;
   height: 100%;
   background: var(--color-authority);
-  animation: indeterminate 1.4s ease-in-out infinite;
+  animation: indeterminate 1.4s var(--motion-ease) infinite;
+}
+
+/* ------------------------------------------------------- reduced motion */
+
+/*
+ * §9: all transforms removed, opacity capped at 100ms, and the PB-01 hero
+ * renders in its resolved state.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-appear {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* Resolved state, not a frozen frame of the animation. */
+  .motion-hero-mark {
+    animation: none;
+    transform: none;
+  }
+
+  /*
+   * "Progress indicators that carry meaning are never removed." The blanket
+   * rule above would otherwise freeze the payment bar at a 25%-wide sliver
+   * parked off to one side, which reads as broken rather than as progress.
+   * It becomes a full static bar instead; PY-02 pairs it with an aria-live
+   * status line, because removing feedback is not an accommodation.
+   */
+  .bar-indeterminate::after {
+    animation: none;
+    width: 100%;
+    transform: none;
+  }
 }
 
 /* Screen-reader-only text, for the accessible names §10 requires. */

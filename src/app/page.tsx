@@ -34,7 +34,10 @@ async function PlatformLanding() {
             and only here, because nothing is being hidden from anyone. */}
         <section className="border-b border-ink-300">
           <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
-            <div className="mb-8 h-5 w-40 bg-ink-900" aria-hidden="true" />
+            {/* §9: the one piece of motion in this product that nobody
+                triggered. It draws once and stops. Under reduced motion it
+                renders already resolved. */}
+            <div className="motion-hero-mark mb-8 h-5 w-40 bg-ink-900" aria-hidden="true" />
             <h1 className="t-display measure m-0 text-ink-900">
               Nigeria needs data protection officers who actually know the Act.
             </h1>

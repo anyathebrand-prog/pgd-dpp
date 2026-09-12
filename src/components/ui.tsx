@@ -50,7 +50,9 @@ export function Button({
     <button
       className={cx(
         'inline-flex items-center justify-center rounded-sm font-semibold',
-        'transition-colors disabled:cursor-not-allowed disabled:bg-ink-100 disabled:text-ink-500',
+        // §9: 120ms on the spec easing. No transform — hover lift and scale
+        // are both on the not-permitted list.
+        'motion-state disabled:cursor-not-allowed disabled:bg-ink-100 disabled:text-ink-500',
         BUTTON_VARIANTS[variant],
         BUTTON_SIZES[size],
         className,
@@ -76,7 +78,7 @@ export function LinkButton({
     <a
       className={cx(
         'inline-flex items-center justify-center rounded-sm font-semibold no-underline',
-        'transition-colors',
+        'motion-state',
         BUTTON_VARIANTS[variant],
         BUTTON_SIZES[size],
         className,
@@ -136,7 +138,7 @@ export function Field({
       ) : null}
       {/* §5.2 error: never colour alone — a glyph and words carry the meaning. */}
       {error ? (
-        <p id={errorId} className="t-body-sm mt-1.5 font-semibold text-danger">
+        <p id={errorId} className="motion-appear t-body-sm mt-1.5 font-semibold text-danger">
           <span aria-hidden="true">▲ </span>
           {error}
         </p>
@@ -146,7 +148,7 @@ export function Field({
 }
 
 const INPUT_BASE =
-  'block w-full h-12 rounded-sm border border-ink-500 bg-surface px-3 text-base text-ink-900 placeholder:text-ink-500';
+  'motion-state block w-full h-12 rounded-sm border border-ink-500 bg-surface px-3 text-base text-ink-900 placeholder:text-ink-500';
 
 export function Input({
   invalid,
@@ -280,7 +282,7 @@ export function Banner({
   return (
     <div
       role={tone === 'danger' ? 'alert' : 'status'}
-      className={cx('rounded-sm border-l-[3px] p-4 text-ink-900', t.rule, t.tint)}
+      className={cx('motion-appear rounded-sm border-l-[3px] p-4 text-ink-900', t.rule, t.tint)}
     >
       <p className="t-label m-0 mb-1">
         <span aria-hidden="true">{t.glyph} </span>
