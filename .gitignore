@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+.env.local
+.mail/
+drizzle/meta/_journal.json.bak
+*.tsbuildinfo
+next-env.d.ts
+.pgdata/
+.storage/
