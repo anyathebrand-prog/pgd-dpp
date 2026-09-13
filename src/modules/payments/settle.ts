@@ -32,6 +32,18 @@ export async function settleTransaction(params: {
   paystackId?: string | null;
   amountKobo?: number | null;
   paidAt?: Date;
+  /**
+   * PAY-11. An offline transfer approved by an institution admin settles
+   * through this same function — IA-09 requires that approval "moves the
+   * application forward exactly as a webhook would", and the only way to be
+   * sure of that is for there to be one path rather than two that agree.
+   *
+   * What differs is the audit entry: a webhook is `system:webhook` and
+   * nobody's decision, while an approval is a named person vouching that money
+   * arrived in a bank account. Recording both as the former would lose the
+   * only part an auditor would ask about.
+   */
+  approvedBy?: { userId: string; role: string } | null;
 }) {
   return adminDb.transaction(async (tx) => {
     const [txn] = await tx
@@ -44,6 +56,14 @@ export async function settleTransaction(params: {
     // PAY-04 idempotency: a duplicate delivery of the same event is a no-op,
     // not a second enrollment.
     if (txn.status === 'success') return { outcome: 'already_settled' as const };
+
+    // An offline transfer waits in `awaiting_approval` until a human approves
+    // it, so that state settles here — but only from IA-09. A webhook arriving
+    // for a reference parked awaiting approval would be settling a payment
+    // nobody has checked against a bank statement.
+    if (txn.status === 'awaiting_approval' && !params.approvedBy) {
+      return { outcome: 'awaiting_approval' as const };
+    }
 
     // Never trust the amount in the callback over the amount we charged. A
     // mismatch is a reconciliation exception for a human, not something to
@@ -128,13 +148,18 @@ export async function settleTransaction(params: {
 
     await tx.insert(auditLog).values({
       institutionId: txn.institutionId,
-      actorId: null,
-      actorRole: 'system:webhook',
+      actorId: params.approvedBy?.userId ?? null,
+      actorRole: params.approvedBy?.role ?? 'system:webhook',
       action: 'payment.settled',
       entity: 'transactions',
       entityId: txn.id,
       subjectId: txn.userId,
-      detail: { reference: txn.reference, context: txn.context, matricNumber },
+      detail: {
+        reference: txn.reference,
+        context: txn.context,
+        matricNumber,
+        channel: txn.channel,
+      },
     });
 
     if (user) {

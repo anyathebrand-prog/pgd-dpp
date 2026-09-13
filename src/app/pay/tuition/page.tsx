@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
@@ -71,6 +72,15 @@ export default async function TuitionCheckout() {
           pendingLabel="Opening checkout"
         />
       </div>
+
+      {/* PAY-11: tuition is the payment most often settled by an employer or a
+          state agency, by transfer. Finding that out by failing a card payment
+          first is not a discovery flow. */}
+      <p className="t-body-sm mt-6">
+        <Link href="/pay/offline" className="text-ink-900 underline underline-offset-2">
+          Paying by bank transfer instead?
+        </Link>
+      </p>
     </main>
   );
 }

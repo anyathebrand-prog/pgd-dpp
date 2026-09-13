@@ -31,6 +31,7 @@ import {
   users,
 } from '@/db/schema';
 import { POST } from '@/app/api/webhooks/paystack/route';
+import { settleTransaction } from '@/modules/payments/settle';
 
 const FEE_KOBO = 2_500_000;
 const TUITION_KOBO = 51_500_000;
@@ -375,5 +376,102 @@ describe('settlement leaves an audit trail', () => {
       .where(eq(inboundEvents.eventId, String(eventId)));
     expect(event.processedAt).toBeTruthy();
     expect(event.processingError).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------ PAY-11 */
+
+/**
+ * IA-09's requirement is that approving a bank transfer "moves the application
+ * forward exactly as a webhook would". The only way to be certain of that is
+ * for there to be one settlement path rather than two that are meant to agree
+ * — so these tests assert that the offline route produces the same end state
+ * as the card route, and that nothing settles without a person.
+ */
+describe('offline transfers settle through the same path, and only with a person', () => {
+  it('will not settle from a webhook while it is awaiting approval', async () => {
+    const app = await makeApplication('offer_accepted');
+    const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
+    await adminDb
+      .update(transactions)
+      .set({ status: 'awaiting_approval', channel: 'offline_transfer' })
+      .where(eq(transactions.id, txn.id));
+
+    // A late webhook, a retried delivery, or anything else arriving on its own
+    // must not settle a payment that a human has not checked against a bank
+    // statement — which is the entire point of the queue.
+    const res = await POST(delivery('charge.success', txn.reference));
+    expect(res.status).toBe(200);
+
+    const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
+    expect(after.status).toBe('awaiting_approval');
+    const enrolled = await adminDb
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.userId, userId));
+    expect(enrolled).toHaveLength(0);
+  });
+
+  it('produces the same enrolment a card payment would, with the approver named', async () => {
+    const app = await makeApplication('offer_accepted');
+    const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
+    await adminDb
+      .update(transactions)
+      .set({ status: 'awaiting_approval', channel: 'offline_transfer' })
+      .where(eq(transactions.id, txn.id));
+
+    const result = await settleTransaction({
+      reference: txn.reference,
+      approvedBy: { userId, role: 'institution_admin' },
+    });
+
+    expect(result.outcome).toBe('settled');
+
+    // Everything the card path produces: the enrolment, the matric number, the
+    // application status, and the lifecycle change on the user.
+    const [enrolment] = await adminDb
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.userId, userId));
+    expect(enrolment.matricNumber).toMatch(/^UNILAG\/DPP\/\d{4}\//);
+
+    const [appAfter] = await adminDb.select().from(applications).where(eq(applications.id, app.id));
+    expect(appAfter.status).toBe('enrolled');
+
+    const [user] = await adminDb.select().from(users).where(eq(users.id, userId));
+    expect(user.status).toBe('student');
+
+    // And the difference that matters: a named person, not the webhook. An
+    // auditor asking "on what basis was this enrolment created" gets an
+    // answer rather than `system:webhook`.
+    const { auditLog } = await import('@/db/schema');
+    const entries = await adminDb
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.action, 'payment.settled'), eq(auditLog.entityId, txn.id)));
+    expect(entries).toHaveLength(1);
+    expect(entries[0].actorId).toBe(userId);
+    expect(entries[0].actorRole).toBe('institution_admin');
+    expect(entries[0].detail).toMatchObject({ channel: 'offline_transfer' });
+  });
+
+  it('is still idempotent — approving twice does not enrol twice', async () => {
+    const app = await makeApplication('offer_accepted');
+    const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
+    await adminDb
+      .update(transactions)
+      .set({ status: 'awaiting_approval', channel: 'offline_transfer' })
+      .where(eq(transactions.id, txn.id));
+
+    const approval = { userId, role: 'institution_admin' };
+    await settleTransaction({ reference: txn.reference, approvedBy: approval });
+    const second = await settleTransaction({ reference: txn.reference, approvedBy: approval });
+
+    expect(second.outcome).toBe('already_settled');
+    const enrolled = await adminDb
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.userId, userId));
+    expect(enrolled).toHaveLength(1);
   });
 });

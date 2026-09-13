@@ -133,6 +133,11 @@ export default async function AdmissionLetter() {
             Back to my application
           </LinkButton>
         )}
+        {/* APP-10: the letter as a file, for the employer or the visa
+            application that will not accept a link. */}
+        <LinkButton href="/api/pdf/letter" variant="secondary">
+          Download as PDF
+        </LinkButton>
       </div>
 
       <p className="t-caption mt-8 text-ink-700 print:hidden">

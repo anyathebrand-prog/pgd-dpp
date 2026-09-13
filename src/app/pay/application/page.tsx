@@ -61,7 +61,16 @@ export default async function ApplicationCheckout() {
         />
       </div>
 
+      {/* PAY-11: many sponsors — an employer, a state agency — pay by
+          transfer, and should not have to fail a card payment to find out
+          that is allowed. */}
       <p className="t-body-sm mt-6">
+        <Link href="/pay/offline" className="text-ink-900 underline underline-offset-2">
+          Paying by bank transfer instead?
+        </Link>
+      </p>
+
+      <p className="t-body-sm mt-3">
         <Link href="/apply" className="text-ink-700 underline underline-offset-2">
           Back to my application
         </Link>

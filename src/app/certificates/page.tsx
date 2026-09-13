@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { certificates, enrollments } from '@/db/schema';
@@ -52,6 +53,14 @@ export default async function Certificates() {
                     </p>
                     <p className="t-caption mt-2 mb-0 text-ink-700">
                       Check it at {platformUrl(`/verify/${cert.verificationCode}`)}
+                    </p>
+                    <p className="t-body-sm mt-3 mb-0">
+                      <Link
+                        href={`/certificates/${encodeURIComponent(cert.verificationCode)}`}
+                        className="text-ink-900 underline underline-offset-2"
+                      >
+                        Open the certificate
+                      </Link>
                     </p>
                   </div>
                 </div>

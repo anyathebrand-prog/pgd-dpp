@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { desc, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { transactionLines, transactions } from '@/db/schema';
@@ -78,6 +79,44 @@ export default async function Billing() {
                       <span className="text-verified-text"> · confirmed</span>
                     ) : null}
                   </p>
+
+                  {t.status === 'success' ? (
+                    <p className="t-body-sm mt-3 mb-0">
+                      <Link
+                        href={`/billing/receipt/${encodeURIComponent(t.reference)}`}
+                        className="text-ink-900 underline underline-offset-2"
+                      >
+                        Open the receipt
+                      </Link>
+                    </p>
+                  ) : null}
+
+                  {/* ST-13 lists "offline payments pending approval", because a
+                      transfer that has been sent but not yet confirmed is the
+                      state people most want to check on. */}
+                  {t.status === 'awaiting_approval' ? (
+                    <p className="t-body-sm mt-3 mb-0 text-ink-900">
+                      Your transfer is with {institution.shortName} for approval. You will be
+                      emailed either way.{' '}
+                      <Link
+                        href={`/pay/offline?ref=${encodeURIComponent(t.reference)}`}
+                        className="text-ink-900 underline underline-offset-2"
+                      >
+                        See what you sent
+                      </Link>
+                    </p>
+                  ) : null}
+
+                  {t.status === 'pending' || t.status === 'failed' || t.status === 'abandoned' ? (
+                    <p className="t-body-sm mt-3 mb-0">
+                      <Link
+                        href={`/pay/offline?ref=${encodeURIComponent(t.reference)}`}
+                        className="text-ink-900 underline underline-offset-2"
+                      >
+                        Pay this by bank transfer
+                      </Link>
+                    </p>
+                  ) : null}
                 </Record>
               );
             })}

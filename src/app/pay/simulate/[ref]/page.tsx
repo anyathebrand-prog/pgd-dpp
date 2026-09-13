@@ -55,10 +55,29 @@ export default async function SimulateCheckout({ params }: { params: Promise<{ r
       .update(raw)
       .digest('hex');
 
+    /*
+     * Delivered to the loopback address with the tenant Host header carried in
+     * the headers, rather than to the tenant hostname itself.
+     *
+     * Node cannot resolve `*.localhost` — Chromium can, which is why this only
+     * fails server-side, and only outside the dev server. Paystack reaches a
+     * public hostname in production, so this is a development-only detail; the
+     * webhook still sees the same Host, the same signature and the same body
+     * it would have seen either way.
+     */
     const proto = process.env.APP_PROTOCOL ?? 'http';
-    await fetch(`${proto}://${h.get('host')}/api/webhooks/paystack`, {
+    const host = h.get('host') ?? 'localhost';
+    const target = /\.localhost(:|$)/.test(host)
+      ? `${proto}://127.0.0.1:${host.split(':')[1] ?? '3000'}/api/webhooks/paystack`
+      : `${proto}://${host}/api/webhooks/paystack`;
+
+    await fetch(target, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-paystack-signature': signature },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-paystack-signature': signature,
+        host,
+      },
       body: raw,
     });
 

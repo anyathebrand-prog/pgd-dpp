@@ -140,3 +140,20 @@ export function takedownNotice(to: string, reference: string, basis: string, ite
     ].join('\n'),
   };
 }
+
+/** PAY-11. A rejected proof is not a rejected payment — the charge is still owed. */
+export function offlineRejectedMail(to: string, reference: string, reason: string): Mail {
+  return {
+    to,
+    subject: `Transfer not confirmed — ${reference}`,
+    text: [
+      'The institution could not confirm your bank transfer against their statement.',
+      '',
+      `Payment reference: ${reference}`,
+      `Reason given: ${reason}`,
+      '',
+      'The payment is still outstanding. You can submit clearer evidence of the transfer,',
+      'or pay by card instead — both are on the payment page in your portal.',
+    ].join('\n'),
+  };
+}

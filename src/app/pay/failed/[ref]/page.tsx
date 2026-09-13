@@ -33,6 +33,11 @@ export default async function FailedPage({ params }: { params: Promise<{ ref: st
 
       <div className="mt-16 flex flex-wrap gap-4">
         <LinkButton href="/pay/application">Try again</LinkButton>
+        {/* PAY-11. The paragraph above tells someone a transfer usually works;
+            without this it is advice with nowhere to go. */}
+        <LinkButton href={`/pay/offline?ref=${encodeURIComponent(ref)}`} variant="secondary">
+          Pay by bank transfer
+        </LinkButton>
         <Link href="/apply" className="t-body-sm self-center text-ink-700 underline underline-offset-2">
           Back to my application
         </Link>

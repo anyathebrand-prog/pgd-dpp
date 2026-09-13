@@ -42,6 +42,15 @@ export const institutions = pgTable(
     /** PAY-06. Verified against the resolved bank name at onboarding. */
     paystackSubaccountCode: text('paystack_subaccount_code'),
     paystackSharePercent: integer('paystack_share_percent').notNull().default(90),
+    /**
+     * PAY-11. Where a sponsor sends a bank transfer, which is how a great many
+     * of them actually pay. Kept on the institution rather than in a settings
+     * blob because PY-06 renders it to someone about to move money: a stale or
+     * mistyped account number here is a payment into the void.
+     */
+    bankName: text('bank_name'),
+    bankAccountName: text('bank_account_name'),
+    bankAccountNumber: text('bank_account_number'),
     /** §5.1: an offer lapses if the acceptance fee is unpaid within N days. */
     offerExpiryDays: integer('offer_expiry_days').notNull().default(14),
     status: text('status', { enum: ['provisioning', 'live', 'suspended'] })

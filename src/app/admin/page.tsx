@@ -58,6 +58,17 @@ export default async function AdminHome() {
       .where(inArray(transactions.status, ['pending', 'awaiting_approval'])),
   );
 
+  // PAY-11. Counted separately from `pending`: an abandoned card payment is
+  // the candidate's to resolve, while a transfer awaiting approval is this
+  // institution's — someone has paid and is waiting on staff.
+  const [offline] = await withTenant(institution.id, (tx) =>
+    tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(transactions)
+      .where(eq(transactions.status, 'awaiting_approval')),
+  );
+  const awaitingApproval = Number(offline?.n ?? 0);
+
   // IA-01: the setup checklist. An institution that has not configured a
   // payout account cannot take money, and the flow is explicit that this must
   // be obvious here rather than discovered at checkout.
@@ -197,6 +208,16 @@ export default async function AdminHome() {
           {Number(pending?.n ?? 0) > 0 ? (
             <p className="t-caption mt-3 mb-0 text-warning">
               {pending.n} transactions are unresolved and excluded from these totals.
+            </p>
+          ) : null}
+          {awaitingApproval > 0 ? (
+            // PAY-11: a transfer sitting unapproved is a candidate who has
+            // paid and is waiting on this institution, so it belongs on the
+            // console rather than only in a queue nobody has opened.
+            <p className="t-body-sm mt-4 mb-0">
+              <Link href="/admin/payments/offline" className="font-semibold text-authority underline underline-offset-2">
+                {awaitingApproval} bank transfer{awaitingApproval === 1 ? '' : 's'} waiting for approval
+              </Link>
             </p>
           ) : null}
         </Panel>
