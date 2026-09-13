@@ -6,16 +6,23 @@
  * mechanism the rest of the product's isolation rests on. Asserting the
  * landing page from `unilag.localhost` would assert nothing at all.
  *
- * The claims worth testing here are the ones that rot: the institution count
- * in the headline is generated from the database, and the redaction is a
- * decoration that must never remove the words underneath it from the
- * accessible name.
+ * The claims worth testing here are the ones that rot: every figure on the
+ * page is counted from the database, the redaction is decoration that must
+ * never remove the words underneath it from the accessible name, and the
+ * animated parts must all be stoppable by someone who did not ask for motion.
+ *
+ * The viewport is the suite-wide 360px baseline, so the navigation is
+ * exercised in its mobile disclosure form unless a test widens it.
  */
 import { expect, test } from '@playwright/test';
 import postgres from 'postgres';
 import 'dotenv/config';
 
 const APEX = 'http://localhost:3000';
+
+function sql() {
+  return postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
+}
 
 test.describe('PB-01', () => {
   test('the headline reads as one sentence, redaction and all', async ({ page }) => {
@@ -32,45 +39,125 @@ test.describe('PB-01', () => {
     ).toBeVisible();
   });
 
-  test('the institution count comes from the database, not from the copy', async ({ page }) => {
-    const sql = postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
-    const [{ count }] = await sql<{ count: string }[]>`
-      SELECT count(*)::int AS count FROM institutions WHERE status = 'live'`;
-    await sql.end();
-
-    const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
-    const n = Number(count);
+  test('every figure in the hero is counted, not typed', async ({ page }) => {
+    const db = sql();
+    const [{ institutions }] = await db<{ institutions: number }[]>`
+      SELECT count(*)::int AS institutions FROM institutions WHERE status = 'live'`;
+    const [{ items }] = await db<{ items: number }[]>`
+      SELECT count(*)::int AS items FROM library_items`;
+    await db.end();
 
     await page.goto(`${APEX}/`);
-    await expect(
-      page.getByText(`One application. ${words[n]} ${n === 1 ? 'university' : 'universities'}.`),
-    ).toBeVisible();
 
-    // And each live institution is actually listed, linked to its own host.
-    await expect(page.getByRole('heading', { name: 'Where you can study' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /View the programme at/ })).toHaveCount(n);
+    const facts = page.locator('dl').first();
+    await expect(facts).toContainText(String(institutions));
+    await expect(facts).toContainText(String(items));
+    await expect(page.getByRole('link', { name: /View the programme at/ })).toHaveCount(
+      institutions,
+    );
+  });
+
+  test('the rotating claim can be stopped, and reads as a list to a screen reader', async ({
+    page,
+  }) => {
+    await page.goto(`${APEX}/`);
+
+    // WCAG 2.2.2 — moving content past five seconds needs a control. The
+    // control is a real button with an accessible name, not a hover target.
+    const stop = page.getByRole('button', { name: 'Stop the rotating headline' });
+    await expect(stop).toBeVisible();
+    await stop.click();
+    await expect(page.getByRole('button', { name: 'Resume the rotating headline' })).toBeVisible();
+
+    // All three claims exist in the DOM at once, so nothing is announced on a
+    // timer and nothing is only available to someone who waits.
+    await expect(page.getByText('Taught as the Act is enforced', { exact: false })).toHaveCount(1);
+  });
+
+  test('with motion reduced, the hero is fully present and nothing moves', async ({ browser }) => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    await page.goto(`${APEX}/`);
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: /Post Graduate Diploma/ }),
+    ).toBeVisible();
+    // Not merely present: visible and at full opacity, which is what fails if
+    // the entrance animation is left holding it at opacity 0.
+    const opacity = await page
+      .getByRole('heading', { level: 1 })
+      .evaluate((el) => getComputedStyle(el).opacity);
+    expect(opacity).toBe('1');
+
+    // The rotator starts stopped rather than starting and then being stopped.
+    await expect(page.getByRole('button', { name: 'Resume the rotating headline' })).toBeVisible();
+    await context.close();
+  });
+
+  test('the mobile menu opens, navigates, and closes on Escape', async ({ page }) => {
+    await page.goto(`${APEX}/`);
+
+    const toggle = page.getByRole('button', { name: 'Menu' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    await page.keyboard.press('Escape');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await toggle.click();
+    await page.getByRole('link', { name: 'Verify a certificate' }).first().click();
+    await expect(page).toHaveURL(/\/verify$/);
+  });
+
+  test('the desktop menus open on click and lead somewhere real', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${APEX}/`);
+
+    const trigger = page.getByRole('button', { name: /The programme/ });
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    // Scoped to the bar: the footer links to the same section, and a locator
+    // that cannot tell them apart is not testing the menu.
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'What you study' })
+      .click();
+    await expect(page.getByRole('heading', { name: 'What you study' })).toBeInViewport();
+  });
+
+  test('the questions are answerable without JavaScript arriving', async ({ page }) => {
+    await page.goto(`${APEX}/`);
+
+    // Native <details>: the answer is in the DOM and the summary toggles it,
+    // which is also why find-in-page can reach it.
+    const question = page.getByRole('group').filter({ hasText: 'Who awards the qualification?' });
+    await expect(question).not.toHaveAttribute('open', '');
+    await page.getByText('Who awards the qualification?').click();
+    await expect(question).toHaveAttribute('open', '');
+    await expect(question).toContainText('The university you applied to');
   });
 
   test('says what it holds about you, and links to the detail', async ({ page }) => {
     await page.goto(`${APEX}/`);
     await expect(page.getByRole('heading', { name: 'What we hold about you' })).toBeVisible();
-    await page
-      .getByRole('link', { name: /Read the detail, including who is responsible/ })
-      .click();
+    await page.getByRole('link', { name: /Read the detail, including who is responsible/ }).click();
     await expect(page).toHaveURL(/\/trust$/);
-  });
-
-  test('an employer can reach verification without an account', async ({ page }) => {
-    // §7 puts Verify in the signed-out header for someone who will never be a
-    // user of this product and should not have to become one.
-    await page.goto(`${APEX}/`);
-    await page.getByRole('link', { name: 'Verify', exact: true }).click();
-    await expect(page).toHaveURL(/\/verify$/);
   });
 
   test('the CTA path leads to the institutions', async ({ page }) => {
     await page.goto(`${APEX}/`);
-    await page.getByRole('link', { name: 'Browse programmes' }).first().click();
+    await page.getByRole('link', { name: 'Browse institutions and intakes' }).first().click();
     await expect(page).toHaveURL(/\/programmes$/);
+  });
+
+  test('nothing on the page scrolls sideways at the 360px baseline', async ({ page }) => {
+    await page.goto(`${APEX}/`);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 });

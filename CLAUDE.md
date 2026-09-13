@@ -27,6 +27,15 @@ radius is 2–4px with exactly one circular element (the verification seal), and
 card types. Reach for the skills for things the brief does not cover — motion choreography, chart
 types, icon selection — not to restyle what it already settled.
 
+### The landing page is the one marketing surface
+
+[`src/app/page.tsx`](src/app/page.tsx) (PB-01) and the `landing-*` components are held to §9 by
+*surface*, not by taste. The hero may rise into place on load and the claim under it may rotate;
+everywhere a student, facilitator or registrar works, §9's ban stands unchanged. What stays banned
+on PB-01 too: hover lift and scale, parallax, shimmer, spinners, animated counters, and any
+entrance triggered by scrolling. The 240ms ceiling applies there as well — delays included.
+[`tests/motion.test.ts`](tests/motion.test.ts) enforces the line, so widening it is a visible edit.
+
 ## Rules that are not obvious from the code
 
 **Server actions never call `redirect()`.** They return `{ redirectTo }` and the client navigates;

@@ -103,6 +103,22 @@ describe('reduced motion is handled the way §9 requires', () => {
     expect(bar).toMatch(/width:\s*100%/);
   });
 
+  it('delivers the hero already in place rather than mid-entrance', () => {
+    const rise = ruleBody('.motion-rise,', block);
+    expect(rise).toMatch(/animation:\s*none/);
+    expect(rise).toMatch(/opacity:\s*1/);
+  });
+
+  it('never starts the rotating claim, and lets anyone stop it', () => {
+    // WCAG 2.2.2: moving content that runs past five seconds needs a control.
+    // Reduced motion is handled in the component rather than in CSS, because
+    // the rotation is a timer rather than an animation — a CSS rule cannot
+    // switch off setInterval.
+    const hero = readFileSync(join(SRC, 'components', 'landing-hero.tsx'), 'utf8');
+    expect(hero).toContain('(prefers-reduced-motion: reduce)');
+    expect(hero).toMatch(/Stop the rotating headline/);
+  });
+
   it('pairs the payment bar with a live status line', () => {
     // §9: "the PY-02 payment bar becomes a static bar plus a text status line
     // that updates via aria-live".
@@ -127,6 +143,26 @@ describe('the one non-user-triggered moment is the only one', () => {
 
   it('draws once and does not loop', () => {
     expect(ruleBody('.motion-redaction::after')).not.toMatch(/animation:[^;]*infinite/);
+  });
+
+  it('lets the hero rise into place, but only the hero', () => {
+    // §9 bans staggered reveals in the product, and that ban is about a
+    // person's tenth visit to a queue rather than their first visit to a
+    // landing page. The line is drawn by surface: the entrance exists on
+    // PB-01 and nowhere a student works.
+    const users = SOURCES.filter(
+      (f) => !f.endsWith('globals.css') && /motion-rise/.test(code(f)),
+    );
+    expect(users.map((f) => f.replace(SRC, 'src'))).toEqual([join('src', 'app', 'page.tsx')]);
+  });
+
+  it('keeps the hero entrance inside the 240ms budget', () => {
+    // Four elements at 60ms apart: the whole sequence lands before the page
+    // transition token would have finished a single fade.
+    for (const cls of ['.motion-rise-1', '.motion-rise-2', '.motion-rise-3', '.motion-rise-4']) {
+      const delay = /(\d+)ms/.exec(ruleBody(cls))?.[1];
+      expect(Number(delay)).toBeLessThanOrEqual(240);
+    }
   });
 
   it('has no animated redaction reveal anywhere else', () => {

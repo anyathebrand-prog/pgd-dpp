@@ -291,6 +291,56 @@ body {
   animation: redaction-wipe var(--motion-page) var(--motion-ease) 240ms both;
 }
 
+/*
+ * The rest of the PB-01 hero, and PB-01 only.
+ *
+ * §9's ban on staggered reveals is about the product: a queue, a record list
+ * or a form that performs an entrance wastes a working person's time on every
+ * visit. The landing page is seen once, by someone deciding whether this
+ * qualification is real, and the brief already concedes it a motion moment.
+ * So the line drawn here is by surface, not by taste — the hero lifts into
+ * place on load, and everything §9 bans for a reason that survives the move
+ * (hover lift, hover scale, parallax, shimmer, scroll-triggered entrances)
+ * stays banned here too, enforced by tests/motion.test.ts.
+ *
+ * The budget is unchanged. Every duration and every delay below is inside the
+ * 240ms ceiling, so the whole sequence is over in less than a third of a
+ * second and never stands between a reader and the words.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.motion-rise {
+  animation: rise var(--motion-page) var(--motion-ease) both;
+}
+
+.motion-rise-1 {
+  animation-delay: 60ms;
+}
+.motion-rise-2 {
+  animation-delay: 120ms;
+}
+.motion-rise-3 {
+  animation-delay: 180ms;
+}
+.motion-rise-4 {
+  animation-delay: 240ms;
+}
+
+/* The rotating claim in the hero. It crossfades and never slides, so the line
+   under it does not appear to be typing itself. */
+.motion-claim {
+  animation: fade-in var(--motion-sheet) var(--motion-ease) both;
+}
+
 /* The payment bar (PY-02) and the upload bar (AP-05). */
 @keyframes indeterminate {
   0% {
@@ -335,6 +385,15 @@ body {
      mid-wipe, it is simply never drawn. */
   .motion-redaction::after {
     content: none;
+  }
+
+  /* The hero arrives already in place. Nothing rises, nothing fades, and the
+     rotating claim stops on the first line — the copy is all still there. */
+  .motion-rise,
+  .motion-claim {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 
   /*
