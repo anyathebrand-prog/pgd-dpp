@@ -37,6 +37,24 @@ export type Principal = {
   allMemberships: { institutionId: string; role: Role }[];
 };
 
+/**
+ * Send people to a console they can actually open. A DPO holds a platform role
+ * and has no access to an institution's admin area, so landing them on /admin
+ * bounced them straight to /no-access.
+ *
+ * It lives here rather than beside the TOTP actions because two entry points
+ * now need it — the second factor and the SSO handoff — and a 'use server'
+ * module may only export async functions, so it could not be shared from
+ * there.
+ */
+export function consoleFor(me: { roles: string[]; platformRoles: string[] }) {
+  const all = [...me.roles, ...me.platformRoles];
+  if (all.includes('dpo')) return '/dpo';
+  if (all.includes('super_admin')) return '/platform/tenants';
+  if (all.includes('curator')) return '/curate';
+  return '/admin';
+}
+
 export async function createSession(
   userId: string,
   opts: { institutionId?: string | null; remember?: boolean; mfaSatisfied?: boolean } = {},

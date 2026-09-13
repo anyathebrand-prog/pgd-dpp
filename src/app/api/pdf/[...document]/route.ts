@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server';
 import { requireUser } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { currentInstitution } from '@/lib/tenant';
+import { currentInstitution, requestOrigin } from '@/lib/tenant';
 import { pdfUnavailable, renderPagePdf } from '@/lib/pdf';
 
 /**
@@ -44,17 +44,9 @@ export async function GET(
   const document = DOCUMENTS[kind];
   if (!document) return new Response('Not found', { status: 404 });
 
-  /*
-   * The Host header, not `nextUrl.origin`.
-   *
-   * Tenancy is resolved from Host (§7.4), and `nextUrl` reports the internal
-   * origin — so rendering against it lands the browser on the platform host,
-   * where no institution resolves and the middleware redirects to the landing
-   * page. The symptom is a receipt download that quietly contains the
-   * marketing site.
-   */
-  const host = request.headers.get('host') ?? request.nextUrl.host;
-  const origin = `${request.nextUrl.protocol.replace(':', '')}://${host}`;
+  // Host header, not nextUrl.origin — see requestOrigin. Rendering against
+  // the internal origin produced a receipt PDF containing the marketing page.
+  const origin = requestOrigin(request);
   const pdf = await renderPagePdf({
     path: document.path(id),
     origin,

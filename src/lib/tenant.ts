@@ -70,3 +70,21 @@ export function platformUrl(path = '/') {
   const proto = process.env.APP_PROTOCOL ?? 'http';
   return `${proto}://${root}${path}`;
 }
+
+/**
+ * The origin the request actually arrived on, built from the Host header.
+ *
+ * `NextRequest.nextUrl.origin` reports the internal origin, which on this
+ * platform is the host WITHOUT a tenant — so a redirect or an internal fetch
+ * built from it silently leaves the institution behind, the middleware
+ * resolves no tenant, and the caller lands on the platform landing page. It
+ * has now caused that exact bug twice (the PDF renderer, and the SSO
+ * handoff), so it lives here once.
+ */
+export function requestOrigin(request: {
+  headers: { get(name: string): string | null };
+  nextUrl: { protocol: string; host: string };
+}) {
+  const host = request.headers.get('host') ?? request.nextUrl.host;
+  return `${request.nextUrl.protocol.replace(':', '')}://${host}`;
+}

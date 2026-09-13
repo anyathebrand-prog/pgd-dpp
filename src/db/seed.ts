@@ -174,6 +174,9 @@ async function main() {
         brandColour: '#1B3A6B',
         paystackSubaccountCode: 'ACCT_seed_unilag',
         paystackSharePercent: 90,
+        // SSO-02. A real institution's secret is exchanged during onboarding
+        // and never committed; this is a fixture so the handoff is testable.
+        ssoSharedSecret: 'seed-unilag-sso-secret-do-not-use-in-production',
         bankName: 'First Bank of Nigeria',
         bankAccountName: 'University of Lagos — PGD DPP',
         bankAccountNumber: '2031457789',

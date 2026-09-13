@@ -7,6 +7,7 @@ import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { publishBlockers } from '@/modules/teaching/actions';
 import { LessonEditor, ModulePublish } from '@/components/teach-panels';
+import { LessonVideo } from '@/components/lesson-video';
 import { Banner, EmptyState, Panel, Record, cx } from '@/components/ui';
 
 /**
@@ -126,6 +127,14 @@ export default async function ModuleAuthoring({
                     }}
                     canMoveUp={i > 0}
                     canMoveDown={i < content.length - 1}
+                  />
+                  {/* LRN-02. Optional by design: the written lesson is what
+                      students are assessed on, and §8 budgets three seconds to
+                      interactive on 3G. */}
+                  <LessonVideo
+                    lessonId={l.id}
+                    hasVideo={Boolean(l.videoUid)}
+                    durationSeconds={l.videoDurationSeconds}
                   />
                 </Record>
               ))}

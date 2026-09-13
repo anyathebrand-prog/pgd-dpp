@@ -23,6 +23,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string; external
     links: [
       { href: '/verify', label: 'Verify a certificate' },
       { href: '/login', label: 'Log in' },
+      { href: '/integrations', label: 'Connect a portal' },
     ],
   },
   {

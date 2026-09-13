@@ -51,6 +51,16 @@ export const institutions = pgTable(
     bankName: text('bank_name'),
     bankAccountName: text('bank_account_name'),
     bankAccountNumber: text('bank_account_number'),
+    /**
+     * SSO-02. The shared secret a university's portal signs its handoff tokens
+     * with. Tier 2 exists because most Nigerian university portals are bespoke
+     * PHP with no SAML or OIDC endpoint (§5.4), and a signed short-lived link
+     * is something any of them can produce.
+     *
+     * Null means the institution has no handoff configured, and PB-08 refuses
+     * every token rather than falling back to something weaker.
+     */
+    ssoSharedSecret: text('sso_shared_secret'),
     /** §5.1: an offer lapses if the acceptance fee is unpaid within N days. */
     offerExpiryDays: integer('offer_expiry_days').notNull().default(14),
     status: text('status', { enum: ['provisioning', 'live', 'suspended'] })
@@ -179,6 +189,32 @@ export const authTokens = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('auth_tokens_user_purpose_idx').on(t.userId, t.purpose)],
+);
+
+/**
+ * SSO-02 replay protection.
+ *
+ * A signed handoff token is a bearer credential for the ninety seconds it
+ * lives, and a link sitting in a browser history or a proxy log can be
+ * replayed inside that window. Each token carries a nonce, each nonce is
+ * spent once, and the row is what makes "once" true.
+ *
+ * Shared rather than tenant-scoped, for the same reason `auth_tokens` is: it
+ * is consumed before any session exists to derive a tenant from.
+ */
+export const ssoNonces = pgTable(
+  'sso_nonces',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    nonce: text('nonce').notNull(),
+    usedAt: createdAt(),
+    /** Kept only as long as a token could still be replayed. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [uniqueIndex('sso_nonces_institution_nonce_key').on(t.institutionId, t.nonce)],
 );
 
 /* --------------------------------------------------------------- programmes */
@@ -976,6 +1012,7 @@ export const SHARED_TABLES = [
   'sessions',
   'memberships',
   'auth_tokens',
+  'sso_nonces',
   'inbound_events',
   'licences',
   'library_items',
