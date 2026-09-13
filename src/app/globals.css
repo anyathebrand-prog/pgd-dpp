@@ -253,22 +253,42 @@ body {
 }
 
 /*
- * PB-01's redacted hero: the single non-user-triggered motion moment in the
- * entire system, and it exists once. It draws in and stops. Nothing else in
- * the product animates without someone having done something first.
+ * PB-01's hero, per §7: the headline is the type treatment, with "Data
+ * Protection" redacted and resolving to reveal it. §9 calls this the single
+ * non-user-triggered motion moment in the entire system, and it exists once.
+ *
+ * The block wipes away rather than the text fading in, because the point is
+ * that something was withheld and then was not. The text underneath is real
+ * text throughout — the block is decoration over it, so a screen reader
+ * never encounters a redacted headline.
+ *
+ * §7 describes it resolving on scroll; §9 describes it as non-user-triggered.
+ * Those cannot both hold, and §9 is the motion authority and forbids
+ * scroll-triggered entrances everywhere else, so it resolves on load.
  */
-@keyframes redaction-draw {
+@keyframes redaction-wipe {
   from {
-    transform: scaleX(0);
+    transform: scaleX(1);
   }
   to {
-    transform: scaleX(1);
+    transform: scaleX(0);
   }
 }
 
-.motion-hero-mark {
-  transform-origin: left center;
-  animation: redaction-draw var(--motion-page) var(--motion-ease) both;
+.motion-redaction {
+  position: relative;
+  white-space: nowrap;
+}
+
+.motion-redaction::after {
+  content: '';
+  position: absolute;
+  inset: -0.05em -0.15em;
+  background: var(--color-ink-900);
+  transform-origin: right center;
+  /* 240ms is the page-transition token and the ceiling. The delay lets the
+     reveal register as an event rather than as a flicker during paint. */
+  animation: redaction-wipe var(--motion-page) var(--motion-ease) 240ms both;
 }
 
 /* The payment bar (PY-02) and the upload bar (AP-05). */
@@ -311,10 +331,10 @@ body {
     opacity: 1;
   }
 
-  /* Resolved state, not a frozen frame of the animation. */
-  .motion-hero-mark {
-    animation: none;
-    transform: none;
+  /* §9: the hero renders in its resolved state. The block is not frozen
+     mid-wipe, it is simply never drawn. */
+  .motion-redaction::after {
+    content: none;
   }
 
   /*

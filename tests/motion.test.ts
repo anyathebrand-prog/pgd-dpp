@@ -88,9 +88,11 @@ describe('reduced motion is handled the way §9 requires', () => {
   });
 
   it('renders the PB-01 hero in its resolved state rather than a frozen frame', () => {
-    const resolved = ruleBody('.motion-hero-mark', block);
-    expect(resolved).toMatch(/animation:\s*none/);
-    expect(resolved).toMatch(/transform:\s*none/);
+    // The headline is redacted by a pseudo-element, so "resolved" means the
+    // bar is never painted at all — not an animation frozen part-way across
+    // the words it is covering.
+    const resolved = ruleBody('.motion-redaction::after', block);
+    expect(resolved).toMatch(/content:\s*none/);
   });
 
   it('keeps the progress bar visible, because removing feedback is not an accommodation', () => {
@@ -116,7 +118,7 @@ describe('the one non-user-triggered moment is the only one', () => {
     // moment in the entire system, and it exists once."
     // globals.css defines the class; exactly one component may apply it.
     const users = SOURCES.filter(
-      (f) => !f.endsWith('globals.css') && /motion-hero-mark/.test(code(f)),
+      (f) => !f.endsWith('globals.css') && /motion-redaction/.test(code(f)),
     );
     expect(users.map((f) => f.replace(SRC, 'src'))).toEqual([
       join('src', 'app', 'page.tsx'),
@@ -124,13 +126,13 @@ describe('the one non-user-triggered moment is the only one', () => {
   });
 
   it('draws once and does not loop', () => {
-    expect(ruleBody('.motion-hero-mark')).not.toMatch(/animation:[^;]*infinite/);
+    expect(ruleBody('.motion-redaction::after')).not.toMatch(/animation:[^;]*infinite/);
   });
 
   it('has no animated redaction reveal anywhere else', () => {
     // Explicitly called out as not permitted inside the product.
     const offenders = SOURCES.filter(
-      (f) => /redaction-draw/.test(code(f)) && !f.endsWith('globals.css'),
+      (f) => /redaction-wipe/.test(code(f)) && !f.endsWith('globals.css'),
     );
     expect(offenders).toEqual([]);
   });

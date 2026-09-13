@@ -19,6 +19,8 @@ export default async function Home() {
 
 /* -------------------------------------------------------------------- PB-01 */
 
+const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+
 async function PlatformLanding() {
   const live = await db
     .select()
@@ -26,28 +28,38 @@ async function PlatformLanding() {
     .where(eq(institutions.status, 'live'))
     .orderBy(asc(institutions.name));
 
+  // The headline claim is generated, not typed. "Five universities" written
+  // by hand becomes a lie the first time one of them leaves.
+  const count = COUNT_WORDS[live.length] ?? String(live.length);
+  const plural = live.length === 1 ? 'university' : 'universities';
+
   return (
     <>
       <TopBar />
       <main id="main">
-        {/* §7 PB-01: the redaction bar is permitted here as a brand device,
-            and only here, because nothing is being hidden from anyone. */}
+        {/*
+          §7: the hero IS the type treatment — the headline partially redacted,
+          resolving to reveal what the programme is about. No stock photography
+          of students with laptops, no illustration, no gradient.
+        */}
         <section className="border-b border-ink-300">
-          <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8 md:py-24">
-            {/* §9: the one piece of motion in this product that nobody
-                triggered. It draws once and stops. Under reduced motion it
-                renders already resolved. */}
-            <div className="motion-hero-mark mb-8 h-5 w-40 bg-ink-900" aria-hidden="true" />
+          <div className="mx-auto max-w-[1200px] px-4 py-20 md:px-8 md:py-28">
             <h1 className="t-display measure m-0 text-ink-900">
-              Nigeria needs data protection officers who actually know the Act.
+              Post Graduate Diploma in{' '}
+              <span className="motion-redaction">Data Protection</span> and Privacy
             </h1>
-            <p className="t-body-lg measure mt-6 text-ink-700">
-              A Post Graduate Diploma in Data Protection &amp; Privacy, awarded by accredited
-              Nigerian universities and delivered online. Apply, study and qualify without leaving
-              your job.
+
+            <p className="t-body-lg mt-6 text-ink-900">
+              One application. {count} {plural}.
             </p>
+            <p className="t-body measure mt-2 text-ink-700">
+              Awarded by accredited Nigerian universities and delivered online, for the people who
+              will hold the DPO role the NDPA 2023 created. Apply, study and qualify without
+              leaving your job.
+            </p>
+
             <div className="mt-10 flex flex-wrap gap-4">
-              <LinkButton href="/programmes">Browse institutions</LinkButton>
+              <LinkButton href="/programmes">Browse programmes</LinkButton>
               <LinkButton href="/trust" variant="secondary">
                 How we handle your data
               </LinkButton>
@@ -55,20 +67,20 @@ async function PlatformLanding() {
           </div>
         </section>
 
+        {/*
+          Proof. The institutions are the credibility, so they come directly
+          after the claim. Manila, because each card is a real filed thing —
+          an institution running a real programme — not a marketing tile.
+        */}
         <section className="mx-auto max-w-[1200px] px-4 py-16 md:px-8">
           <h2 className="t-h2 m-0 text-ink-900">Where you can study</h2>
           <p className="t-body measure mt-2 text-ink-700">
             Each university sets its own fees, entry requirements and calendar, and awards its own
-            credential. The platform runs the admissions, payments and library.
+            credential. The platform runs admissions, payments and the library.
           </p>
           <ul className="mt-8 grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-2 lg:grid-cols-3">
             {live.map((inst) => (
-              <Record
-                as="li"
-                key={inst.id}
-                title={inst.name}
-                meta={inst.city ?? undefined}
-              >
+              <Record as="li" key={inst.id} title={inst.name} meta={inst.city ?? undefined}>
                 <a
                   href={tenantUrl(inst.slug)}
                   className="t-body-sm font-semibold text-authority underline underline-offset-2"
@@ -79,33 +91,111 @@ async function PlatformLanding() {
             ))}
           </ul>
           {live.length === 0 ? (
-            <p className="t-body mt-6 text-ink-700">No institutions are open for applications yet.</p>
+            <p className="t-body mt-6 text-ink-700">No institution is open for applications yet.</p>
           ) : null}
         </section>
 
+        {/* The ground the qualification stands on. */}
         <section className="border-t border-ink-300">
-          <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-16 md:grid-cols-3 md:px-8">
-            <Panel title="What you study">
-              <p className="t-body-sm m-0 text-ink-700">
-                The NDPA 2023 and GAID 2025 as they are enforced, not as they are summarised.
-                Assessment, breach handling, DPIAs, cross-border transfers, and the practice of the
-                DPO role.
+          <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8">
+            <h2 className="t-h2 m-0 text-ink-900">Why this qualification, now</h2>
+            <div className="mt-8 grid gap-8 md:grid-cols-3">
+              <div>
+                <h3 className="t-h3 m-0 text-ink-900">The law is being enforced</h3>
+                <p className="t-body-sm measure mt-2 text-ink-700">
+                  The NDPA 2023 and the GAID 2025, effective 19 September 2025, create recurring
+                  obligations and a regulator willing to act on them. Organisations need people who
+                  have read the Act rather than a summary of it.
+                </p>
+              </div>
+              <div>
+                <h3 className="t-h3 m-0 text-ink-900">Taught as practice</h3>
+                <p className="t-body-sm measure mt-2 text-ink-700">
+                  Lawful basis, breach handling against the 72-hour clock, DPIAs, cross-border
+                  transfers, and the working reality of the DPO role — assessed, not just
+                  presented.
+                </p>
+              </div>
+              <div>
+                <h3 className="t-h3 m-0 text-ink-900">A library that stays yours</h3>
+                <p className="t-body-sm measure mt-2 text-ink-700">
+                  Nigerian legislation, NDPC guidance and enforcement decisions, and privacy
+                  judgments, in one searchable place. Every item carries its source and its
+                  licence. Access continues after you graduate.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/*
+          The claim this product has to be able to make. A data protection
+          programme that is vague about its own processing has no standing to
+          teach it.
+        */}
+        <section className="border-t border-ink-300">
+          <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-16 md:grid-cols-[1.4fr_1fr] md:px-8">
+            <div>
+              <h2 className="t-h2 m-0 text-ink-900">What we hold about you</h2>
+              <p className="t-body measure mt-3 text-ink-700">
+                Applying means sending a university your degree certificate, your transcript and a
+                photograph of your face. We are teaching privacy while processing exactly the kind
+                of data the Act is about, so the standard we hold ourselves to is the one we teach.
               </p>
-            </Panel>
-            <Panel title="The library">
-              <p className="t-body-sm m-0 text-ink-700">
-                Nigerian legislation, NDPC guidance and enforcement decisions, and privacy judgments,
-                in one searchable place. Every item carries its source and its licence. Access
-                continues after you graduate.
+              <ul className="t-body-sm measure mt-5 list-disc space-y-2 pl-5 text-ink-900">
+                <li>
+                  Consent is asked for separately, per purpose, and can be withdrawn as easily as
+                  it was given.
+                </li>
+                <li>
+                  Documents are never publicly addressable. Staff open them through links that
+                  expire in minutes, and every opening is recorded.
+                </li>
+                <li>
+                  If your application is unsuccessful, your documents are deleted on a schedule
+                  that runs whether or not anyone remembers it.
+                </li>
+                <li>
+                  You can download everything we hold about you, at any time, without asking.
+                </li>
+              </ul>
+              <p className="t-body-sm mt-5">
+                <Link href="/trust" className="text-ink-900 underline underline-offset-2">
+                  Read the detail, including who is responsible for what
+                </Link>
               </p>
-            </Panel>
-            <Panel title="What we hold about you">
-              <p className="t-body-sm m-0 mb-3 text-ink-700">
-                We are processing credentials and a photograph of your face while teaching privacy.
-                Consent is asked for separately, per purpose, and can be withdrawn.
+            </div>
+
+            <Panel title="Not collected">
+              <p className="t-body-sm mt-0 mb-4 text-ink-700">
+                Nothing in this application needs your National Identification Number, so it is not
+                asked for. Collecting data because it might be useful later is the habit this
+                programme exists to correct.
               </p>
-              <Redacted label="National Identification Number — collected only where a university requires it" />
+              <Redacted label="National Identification Number — not collected" />
             </Panel>
+          </div>
+        </section>
+
+        {/* The CTA path once more, for anyone who read down. */}
+        <section className="border-t border-ink-300">
+          <div className="mx-auto max-w-[1200px] px-4 py-16 md:px-8">
+            <h2 className="t-h2 measure m-0 text-ink-900">
+              One application, to the university you choose.
+            </h2>
+            <p className="t-body measure mt-3 text-ink-700">
+              The application fee is set by each institution and charged when you submit. Tuition
+              is only ever charged after you have been offered a place and accepted it.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <LinkButton href="/programmes">Browse programmes</LinkButton>
+              <Link
+                href="/verify"
+                className="t-body-sm self-center text-ink-700 underline underline-offset-2"
+              >
+                Or verify someone&apos;s certificate
+              </Link>
+            </div>
           </div>
         </section>
       </main>

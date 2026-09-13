@@ -72,9 +72,20 @@ export async function TopBar() {
               </form>
             </>
           ) : (
-            <Link href="/login" className="t-body-sm text-ink-900 no-underline underline underline-offset-2">
-              Log in
-            </Link>
+            <>
+              {/* §7: the signed-out header is mark, Verify, Log in. Verify is
+                  there for the employer checking a certificate, who is not a
+                  user of this product and never will be. */}
+              <Link
+                href="/verify"
+                className="t-body-sm text-ink-700 no-underline hover:text-ink-900"
+              >
+                Verify
+              </Link>
+              <Link href="/login" className="t-body-sm text-ink-900 no-underline underline underline-offset-2">
+                Log in
+              </Link>
+            </>
           )}
         </div>
       </div>
