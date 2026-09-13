@@ -69,7 +69,12 @@ npm run dev                 npm run build            npm run typecheck
 npm run pg:start            npm run db:reset         npm run db:rls
 npm run test                npm run test:e2e         npm run test:e2e:prod
 npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- reconcile
+npm run mail                npm run totp -- <email>
 ```
+
+No `RESEND_API_KEY` means mail lands in `.mail/` instead of a mailbox; `npm run mail` reads it.
+Staff 2FA is not relaxed locally — `npm run totp -- <email>` computes the code from the stored
+secret, so the login path is exercised rather than bypassed.
 
 Local runs on `unilag.localhost:3000` and `unn.localhost:3000` — two seeded tenants, deliberately,
 so isolation bugs surface in development. Seeded accounts and the rest of the setup are in the

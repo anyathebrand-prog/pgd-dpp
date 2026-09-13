@@ -56,16 +56,50 @@ prefix is rewritten by the middleware and no route handler knows the difference.
 
 Password for all of them: `Passw0rd-seed-2026`
 
-| Account | Role |
-|---|---|
-| `candidate@unilag.example.ng` | Candidate with a submitted application |
-| `student@unilag.example.ng` | Enrolled student |
-| `registry@unilag.example.ng` | Registry officer — enrols TOTP on first login |
-| `admin@unilag.example.ng` | Institution admin |
-| `dpo@example.ng` | Data Protection Officer |
+| Account | Console | Where to sign in |
+|---|---|---|
+| `candidate@unilag.example.ng` | The application funnel, `/apply` | `unilag.localhost:3000/login` |
+| `student@unilag.example.ng` | Student dashboard, `/dashboard` | `unilag.localhost:3000/login` |
+| `facilitator@unilag.example.ng` | Teaching and grading, `/teach` | `unilag.localhost:3000/login` |
+| `registry@unilag.example.ng` | Admissions queue, `/admin/applications` — **2FA** | `unilag.localhost:3000/login` |
+| `admin@unilag.example.ng` | Institution admin, `/admin` — **2FA** | `unilag.localhost:3000/login` |
+| `dpo@example.ng` | DPO console, `/dpo` — **2FA** | `app.localhost:3000/login` |
 
 The `unn` accounts mirror these. **Sign in as UNN staff and try to reach a UNILAG record** — that is
 what the two-tenant fixture is for.
+
+Nothing here needs a working mailbox: every seeded account is already verified and has a password.
+
+### Reading the email that was not sent
+
+With no `RESEND_API_KEY`, messages are written to `.mail/` rather than sent — deliberately, so the
+OTP, activation and reset flows work locally without a provider and without the classic accident of
+mailing real candidates from a developer's machine. That is also why signing up with your own Gmail
+address produces no email.
+
+```bash
+npm run mail                      # the most recent message, whoever it was for
+npm run mail -- you@gmail.com     # the most recent one for that address
+npm run mail -- you@gmail.com 5   # the last five
+```
+
+Codes expire after fifteen minutes; the script says so rather than letting a stale one look like a
+broken login. To send for real, set `RESEND_API_KEY` and `MAIL_FROM` in `.env`.
+
+### Getting past 2FA on staff accounts
+
+AUTH-08 requires a second factor for registry, institution admin, super admin and DPO accounts, and
+that is not relaxed in development — it would stop being tested if it were. On first login the
+account lands on the setup screen, which prints the key for any authenticator app. If you would
+rather not reach for your phone:
+
+```bash
+npm run totp -- registry@unilag.example.ng
+```
+
+That reads the secret the server already stored and does the RFC 6238 maths a phone would do, so no
+part of the login path is skipped. On a first login, leave the setup screen open, run it, and paste
+the code.
 
 ### Paying without Paystack keys
 
@@ -209,6 +243,7 @@ npm run db:up               npm run db:reset        npm run db:rls
 npm run pg:start            npm run pg:stop         npm run pg:status     npm run pg:destroy
 npm run test                npm run test:isolation   npm run test:e2e
 npm run worker -- purge     npm run worker -- lapse-offers    npm run worker -- reconcile
+npm run mail                npm run totp -- <email>
 ```
 
 ---
