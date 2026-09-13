@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHmac } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 
 /**
@@ -44,6 +44,31 @@ export async function putObject(key: string, body: Buffer) {
 
 export async function getObject(key: string) {
   return readFileSync(resolve(key));
+}
+
+/**
+ * LRN-02. Lesson video lives under the institution prefix like everything
+ * else, so storage isolation still mirrors row isolation — a uid on its own
+ * names nothing.
+ */
+export function videoKey(institutionId: string, uid: string) {
+  const safe = uid.replace(/[^a-zA-Z0-9._-]/g, '');
+  return `institutions/${institutionId}/video/${safe}.mp4`;
+}
+
+/**
+ * Size without reading the bytes, for range requests.
+ *
+ * Returns null rather than throwing when the object is missing: a lesson row
+ * pointing at a video the store does not have is a content problem for a
+ * facilitator, not a 500 for a student in the middle of a lesson.
+ */
+export async function objectSize(key: string): Promise<number | null> {
+  try {
+    return statSync(resolve(key)).size;
+  } catch {
+    return null;
+  }
 }
 
 /** CMP-10. The purge job calls this, and the deletion is verified, not assumed. */

@@ -146,6 +146,58 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     }
   });
 
+  test('accepts a transcript the size APP-04 actually promises', async ({ page }) => {
+    // A scan from a phone camera is megabytes, not kilobytes, and the tiny
+    // fixtures above would never have caught a framework-level body limit
+    // below the 5MB this product advertises. The candidate would have seen a
+    // failure with no message they could act on.
+    await login(page);
+    await page.goto(`${TENANT}/apply/documents`);
+
+    const slot = page.locator('li', {
+      has: page.getByRole('heading', { name: 'Academic transcript', exact: true }),
+    });
+    const padding = Buffer.alloc(3 * 1024 * 1024, 0x20);
+    await slot.locator('input[type=file]').setInputFiles({
+      name: 'transcript-scan.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.concat([
+        Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n'),
+        padding,
+        Buffer.from('\ntrailer<</Root 1 0 R>>\n%%EOF'),
+      ]),
+    });
+    await slot.getByRole('button', { name: /Upload|Replace/ }).click();
+
+    /*
+     * Asserted against the database, not against the slot.
+     *
+     * The slot already said "on file" from the small fixture uploaded a moment
+     * ago, so a screen assertion passes whether or not the big one arrived —
+     * and it did not: the server rejected it with "Body exceeded 1mb limit"
+     * and answered 200, leaving the page looking fine. The only honest
+     * question is whether the bytes are stored.
+     */
+    const db = postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
+    await expect
+      .poll(
+        async () => {
+          // Scoped to this run's candidate. A filename match alone finds the
+          // row an earlier run left behind and passes whatever happened now.
+          const [row] = await db`
+            SELECT d.size_bytes FROM documents d
+            JOIN applications a ON a.id = d.application_id
+            JOIN users u ON u.id = a.user_id
+            WHERE u.email = ${candidate} AND d.kind = 'transcript' AND d.status = 'uploaded'
+            ORDER BY d.created_at DESC LIMIT 1`;
+          return Number(row?.size_bytes ?? 0);
+        },
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThan(1024 * 1024);
+    await db.end();
+  });
+
   test('records consent and refuses to proceed without the required one', async ({ page }) => {
     await login(page);
     await page.goto(`${TENANT}/apply/consent`);
