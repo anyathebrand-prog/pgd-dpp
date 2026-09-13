@@ -103,3 +103,40 @@ export function receiptMail(to: string, reference: string, amountKobo: number, w
     ].join('\n'),
   };
 }
+
+/**
+ * LIB-07. Two mails: one telling the claimant their claim is real and has a
+ * reference, one putting it in front of the people who can act on it.
+ */
+export function takedownAcknowledgement(to: string, reference: string): Mail {
+  return {
+    to,
+    subject: `Takedown claim received — ${reference}`,
+    text: [
+      'We have received your claim about an item in the library.',
+      '',
+      `Your reference: ${reference}`,
+      '',
+      'A curator reviews every claim, and the Data Protection Officer is copied on all of them.',
+      'Where a claim is upheld the item is withdrawn and the page explains that it was, rather',
+      'than disappearing.',
+      '',
+      'Quote the reference above in any correspondence about this claim.',
+    ].join('\n'),
+  };
+}
+
+export function takedownNotice(to: string, reference: string, basis: string, item: string): Mail {
+  return {
+    to,
+    subject: `Takedown claim ${reference} (${basis})`,
+    text: [
+      `A takedown claim has been logged against: ${item}`,
+      '',
+      `Reference: ${reference}`,
+      `Basis: ${basis}`,
+      '',
+      'It is in the claims queue in the DPO console.',
+    ].join('\n'),
+  };
+}

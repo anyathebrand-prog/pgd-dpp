@@ -8,9 +8,9 @@ import { logIn } from '@/modules/auth/actions';
  * AU-03.
  *
  * SSO-01: Tier 3 — a branded link from the university portal landing here, and
- * the student logging in natively — is what works at launch for every tenant.
- * The signed-handoff path (SSO-02, Tier 2) is at /sso/handoff. Neither is
- * assumed; the native form is always present.
+ * the student logging in natively — is what works at launch for every tenant,
+ * and it is the only tier built today. SSO-02 (the Tier 2 signed handoff) is
+ * Phase 2 and has no endpoint yet; nothing on this page assumes otherwise.
  */
 export default async function LoginPage() {
   const institution = await requireInstitution();

@@ -96,9 +96,10 @@ export default async function PrivacySettings() {
                       <div className="w-[180px] shrink-0 text-right">
                         <p className="t-body-sm m-0 font-semibold text-ink-900">Cannot be withdrawn here</p>
                         <p className="t-caption m-0 text-ink-700">
-                          Withdrawing this means ending your relationship with the institution.{' '}
-                          <Link href="/account/close" className="text-ink-700 underline underline-offset-2">
-                            Close my account
+                          Withdrawing this means ending your relationship with the institution,
+                          so it goes to the Data Protection Officer rather than to a toggle.{' '}
+                          <Link href="/dpo/request" className="text-ink-700 underline underline-offset-2">
+                            Ask for your account to be closed
                           </Link>
                         </p>
                       </div>

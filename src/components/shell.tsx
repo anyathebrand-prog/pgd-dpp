@@ -102,7 +102,7 @@ export async function BottomTabs() {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/programme', label: 'Programme' },
     { href: '/library', label: 'Library' },
-    { href: '/alumni', label: 'Alumni' },
+    { href: '/grades', label: 'Grades' },
     { href: '/account', label: 'Account' },
   ];
   return (

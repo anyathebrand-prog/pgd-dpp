@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Banner, Button } from './ui';
@@ -47,7 +47,30 @@ export function ActionForm({
    */
   outstanding?: { label: string; href: string }[];
 }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(action, undefined);
+  const formRef = useRef<HTMLFormElement>(null);
+  const submitted = useRef<Record<string, string> | null>(null);
+
+  /**
+   * React 19 resets an uncontrolled form once its action resolves. That is
+   * right after a success — the form is done — and badly wrong after a
+   * validation error, where it silently erases everything the person typed
+   * and leaves them looking at "Enter your date of birth" over an empty
+   * eight-field form. So the values are captured on the way in and put back
+   * when the action came back with an error.
+   */
+  const keepValues = async (prev: ActionState, form: FormData): Promise<ActionState> => {
+    const values: Record<string, string> = {};
+    for (const [key, value] of form.entries()) {
+      if (typeof value === 'string') values[key] = value;
+    }
+    submitted.current = values;
+    return action(prev, form);
+  };
+
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
+    keepValues,
+    undefined,
+  );
   const router = useRouter();
   const blocked = (outstanding?.length ?? 0) > 0;
 
@@ -55,22 +78,58 @@ export function ActionForm({
     if (state?.redirectTo) router.push(state.redirectTo);
   }, [state?.redirectTo, router]);
 
+  useEffect(() => {
+    if (!state?.error || !submitted.current || !formRef.current) return;
+    for (const element of Array.from(formRef.current.elements)) {
+      if (
+        !(element instanceof HTMLInputElement) &&
+        !(element instanceof HTMLTextAreaElement) &&
+        !(element instanceof HTMLSelectElement)
+      ) {
+        continue;
+      }
+      const previous = submitted.current[element.name];
+      // A file input cannot be set programmatically, and re-filling a
+      // password box from memory is not something to do on a failed submit.
+      if (element instanceof HTMLInputElement) {
+        if (element.type === 'file' || element.type === 'password') continue;
+        if (element.type === 'checkbox' || element.type === 'radio') {
+          // A checkbox submits its value (default "on") only when checked, and
+          // a radio group submits the one that was chosen — so equality here
+          // restores both correctly, and an absent key means unchecked.
+          element.checked = previous !== undefined && previous === element.value;
+          continue;
+        }
+      }
+      if (previous !== undefined) element.value = previous;
+    }
+  }, [state]);
+
   return (
-    <form action={formAction} noValidate>
-      {state?.error ? (
-        <div className="mb-6">
-          <Banner tone="danger" title="This could not be saved">
-            <p>{state.error}</p>
-          </Banner>
-        </div>
-      ) : null}
-      {state?.notice ? (
-        <div className="mb-6">
-          <Banner tone="info">
-            <p>{state.notice}</p>
-          </Banner>
-        </div>
-      ) : null}
+    <form ref={formRef} action={formAction} noValidate>
+      {/*
+        This wrapper always renders, even when there is nothing to say.
+        Conditionally inserting a sibling BEFORE the fields changes their
+        position in the tree, React remounts them, and every uncontrolled
+        input resets — so a validation error would silently erase everything
+        the person had typed, which is the worst possible moment to do it.
+      */}
+      <div>
+        {state?.error ? (
+          <div className="mb-6">
+            <Banner tone="danger" title="This could not be saved">
+              <p>{state.error}</p>
+            </Banner>
+          </div>
+        ) : null}
+        {state?.notice ? (
+          <div className="mb-6">
+            <Banner tone="info">
+              <p>{state.notice}</p>
+            </Banner>
+          </div>
+        ) : null}
+      </div>
 
       {children}
 

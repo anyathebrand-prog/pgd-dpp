@@ -301,3 +301,95 @@ test.describe('the retention report', () => {
     await expect(page.getByText(/rejected applicants/i).first()).toBeVisible();
   });
 });
+
+/* -------------------------------------------------------- LIB-07 / CMP-16 */
+
+test.describe('a takedown claim reaches someone who can act on it', () => {
+  const claimant = `rights-holder-${RUN}@example.ng`;
+
+  test('the public form is reachable without an account, and issues a reference', async ({
+    browser,
+    baseURL,
+  }) => {
+    // Explicitly signed out: the point of LB-05 is that a rights holder who
+    // has never heard of this platform can use it.
+    const context = await browser.newContext({ baseURL, storageState: undefined });
+    const page = await context.newPage();
+
+    await page.goto('/library/takedown');
+    await expect(page.getByRole('heading', { name: 'Report an item in the library' })).toBeVisible();
+
+    await page.getByLabel(/The item/).fill(`Test monograph ${RUN}`);
+    await page.getByLabel(/Your name/).fill('A Rights Holder');
+    await page.getByLabel(/Email address/).fill(claimant);
+    await page.getByLabel(/What is wrong/).fill(
+      'This monograph is under copyright and no licence was granted for hosting it here.',
+    );
+
+    // The declaration is required, and the form says so rather than failing
+    // silently — a claim with no declaration is not a claim.
+    await page.getByRole('button', { name: 'Submit this claim' }).click();
+    await expect(page.getByText('Confirm the declaration before submitting.')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await page.getByRole('checkbox').check();
+    await page.getByRole('button', { name: 'Submit this claim' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Your claim is logged' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/TD-/)).toBeVisible();
+
+    // And the claimant is told, at the address they gave, with the reference.
+    const mail = mailTo(claimant);
+    expect(mail).toContain('TD-');
+    await context.close();
+  });
+
+  test('and the DPO sees it', async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ baseURL, storageState: DPO_STATE });
+    const page = await context.newPage();
+
+    await page.goto('/dpo/evidence');
+    await expect(page.getByRole('heading', { name: 'Compliance evidence export' })).toBeVisible();
+    await expect(page.getByText(`Test monograph ${RUN}`)).toBeVisible();
+    await context.close();
+  });
+});
+
+test.describe('the evidence bundle', () => {
+  test.use({ storageState: DPO_STATE });
+
+  test('downloads in one action, and records that it was produced', async ({ page }) => {
+    await page.goto('/dpo/evidence');
+    await expect(page.getByText('Processing activities', { exact: true })).toBeVisible();
+
+    const download = page.waitForEvent('download');
+    await page.getByRole('link', { name: 'Export the bundle' }).click();
+    expect((await download).suggestedFilename()).toMatch(
+      /^compliance-evidence-\d{4}-\d{2}-\d{2}\.json$/,
+    );
+
+    // CMP-14: exporting the audit log is itself an auditable event, so the
+    // page that lists past exports must now list this one.
+    await page.reload();
+    await expect(page.getByText('No bundle has been exported yet.')).toHaveCount(0);
+  });
+
+  test('is refused to someone without the role', async ({ browser, baseURL }) => {
+    const context = await browser.newContext({ baseURL, storageState: undefined });
+    const page = await context.newPage();
+    await page.goto('/login');
+    await page.getByLabel(/Email address/).fill(student);
+    await page.getByLabel(/^Password/).fill(PASSWORD);
+    await page.getByRole('button', { name: 'Log in' }).click();
+    await page.waitForURL(/\/(dashboard|apply)/, { timeout: 30_000 });
+
+    // The check runs on the request that produces the bytes, not on the page
+    // that offered the button — so hitting the URL directly is the test.
+    await page.goto('/api/dpo/evidence');
+    await expect(page).toHaveURL(/\/no-access/);
+    await context.close();
+  });
+});

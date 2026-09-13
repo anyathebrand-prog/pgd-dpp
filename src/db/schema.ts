@@ -746,6 +746,47 @@ export const libraryItems = pgTable(
   (t) => [index('library_items_status_idx').on(t.status)],
 );
 
+/**
+ * LIB-07. A takedown claim against a library item.
+ *
+ * Shared rather than tenant-scoped, because the corpus is shared: a rights
+ * holder complains about an item, not about a university. The claimant is
+ * usually not a user of this platform and is not asked to become one, so
+ * their contact details live here and nowhere else — and they are personal
+ * data, which is why this table carries its own retention rule.
+ */
+export const takedownRequests = pgTable(
+  'takedown_requests',
+  {
+    id: id(),
+    /** Human-quotable, and the only thing the claimant is given to quote. */
+    reference: text('reference').notNull(),
+    itemId: uuid('item_id').references(() => libraryItems.id, { onDelete: 'set null' }),
+    /** Free text, because a claimant who cannot find the item still has a claim. */
+    itemDescription: text('item_description').notNull(),
+    claimantName: text('claimant_name').notNull(),
+    claimantEmail: text('claimant_email').notNull(),
+    claimantOrganisation: text('claimant_organisation'),
+    basis: text('basis', {
+      enum: ['copyright', 'personal_data', 'inaccuracy', 'other'],
+    }).notNull(),
+    detail: text('detail').notNull(),
+    /** The declaration is the part that makes a bad-faith claim actionable. */
+    declaredAt: timestamp('declared_at', { withTimezone: true }).notNull().defaultNow(),
+    status: text('status', { enum: ['received', 'under_review', 'upheld', 'rejected'] })
+      .notNull()
+      .default('received'),
+    outcomeNote: text('outcome_note'),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('takedown_requests_reference_key').on(t.reference),
+    index('takedown_requests_status_idx').on(t.status),
+  ],
+);
+
 /* ----------------------------------------------------------- shared: alumni */
 
 export const alumniProfiles = pgTable(
@@ -929,6 +970,7 @@ export const SHARED_TABLES = [
   'inbound_events',
   'licences',
   'library_items',
+  'takedown_requests',
   'alumni_profiles',
   'privacy_notices',
   'consent_records',
