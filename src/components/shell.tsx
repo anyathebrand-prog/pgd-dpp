@@ -16,6 +16,7 @@ import { cx } from './ui';
 const STUDENT_NAV = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/programme', label: 'Programme' },
+  { href: '/live', label: 'Live' },
   { href: '/library', label: 'Library' },
   { href: '/resources', label: 'Research' },
   { href: '/grades', label: 'Grades' },

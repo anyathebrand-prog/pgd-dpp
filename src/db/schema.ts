@@ -896,6 +896,69 @@ export const alumniProfiles = pgTable(
 );
 
 /**
+ * LRN-07 — a live session, and LRN-10 — who turned up.
+ *
+ * §5.5 keeps live teaching deliberately thin: a link to Zoom or Meet and a
+ * calendar invite, not a video platform. We do not host the call, we do not
+ * record it, and we do not pretend to — what this platform owns is knowing
+ * that a session exists, who it is for, and who attended.
+ *
+ * That last part is LRN-10's real purpose. Attendance is accreditation
+ * evidence for the NUC, so it is a record an institution has to be able to
+ * produce years later, which means it belongs in a table rather than in
+ * whatever the conferencing vendor is willing to export this quarter.
+ */
+export const liveSessions = pgTable(
+  'live_sessions',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    cohortId: uuid('cohort_id').references(() => cohorts.id, { onDelete: 'cascade' }),
+    moduleId: uuid('module_id').references(() => modules.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    /** The vendor's link. Never rendered to someone not entitled to it. */
+    joinUrl: text('join_url').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    durationMinutes: integer('duration_minutes').notNull().default(60),
+    /** Where a recording ended up, if the facilitator published one. */
+    recordingUrl: text('recording_url'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('live_sessions_institution_starts_idx').on(t.institutionId, t.startsAt)],
+);
+
+/**
+ * LRN-10. One row per person per session, written when they open the join
+ * link.
+ *
+ * It records that we handed someone the link at a particular moment, which is
+ * the only thing this platform can honestly attest to — we are not in the
+ * call and cannot know whether they stayed. The distinction matters for an
+ * accreditation file, so the column is named for what it is.
+ */
+export const sessionAttendance = pgTable(
+  'session_attendance',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => liveSessions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    joinedAt: createdAt(),
+  },
+  (t) => [uniqueIndex('session_attendance_session_user_key').on(t.sessionId, t.userId)],
+);
+
+/**
  * ALM-10 / ALM-11 — a school's private channel, and what an institution
  * broadcasts into it.
  *

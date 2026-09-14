@@ -153,6 +153,12 @@ export default async function MyModules() {
       {/* LRN-06. The dashboard has rendered these since the beginning and
           nothing could write one, so every cohort's announcements were
           whatever the seed said. */}
+      <p className="t-body-sm mt-8">
+        <Link href="/teach/sessions" className="text-ink-900 underline underline-offset-2">
+          Live sessions and the attendance register
+        </Link>
+      </p>
+
       <h2 className="t-h2 mt-14 mb-4 text-ink-900">Announcements</h2>
       <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
         <div>
