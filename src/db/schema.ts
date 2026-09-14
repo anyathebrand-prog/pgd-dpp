@@ -832,6 +832,31 @@ export const takedownRequests = pgTable(
   ],
 );
 
+/**
+ * RES-06. A reader's own bookmarks.
+ *
+ * Shared rather than tenant-scoped, because the corpus is: an alumnus who
+ * studied at one university and bookmarked a judgment keeps that bookmark,
+ * and LIB-08 says their access continues after they graduate. The row is
+ * personal data — it says what someone has been reading — so it is deleted
+ * with the user rather than retained with the item.
+ */
+export const bookmarks = pgTable(
+  'bookmarks',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => libraryItems.id, { onDelete: 'cascade' }),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('bookmarks_user_item_key').on(t.userId, t.itemId)],
+);
+
 /* ----------------------------------------------------------- shared: alumni */
 
 export const alumniProfiles = pgTable(
@@ -1017,6 +1042,7 @@ export const SHARED_TABLES = [
   'licences',
   'library_items',
   'takedown_requests',
+  'bookmarks',
   'alumni_profiles',
   'privacy_notices',
   'consent_records',

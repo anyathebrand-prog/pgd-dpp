@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { libraryItems, licences } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
-import { signedUrl } from '@/lib/storage';
 import { Banner, DataString, Panel, StaffBand } from '@/components/ui';
 import { ItemEditor, ItemFile, ItemStatus } from '@/components/curator-panels';
 import { publishBlockers } from '@/modules/library/queries';
@@ -107,17 +106,18 @@ export default async function ItemEditorPage({ params }: { params: Promise<{ id:
               />
               {item.objectKey ? (
                 <p className="t-caption mt-4 mb-0">
-                  {/* CMP-13: nothing in the store is publicly addressable, not
-                      even a government work — the link expires either way. */}
+                  {/* The library's own file route, not the documents one:
+                      that resolves keys against `documents` and would 404 for
+                      everything in the corpus. */}
                   <a
-                    href={signedUrl(item.objectKey)}
+                    href={`/api/library/${id}/file`}
                     className="text-ink-900 underline underline-offset-2"
                     target="_blank"
                     rel="noopener"
                   >
                     Open what is stored
                   </a>{' '}
-                  · link expires in minutes
+                  · published items only
                 </p>
               ) : null}
             </Panel>

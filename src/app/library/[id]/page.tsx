@@ -5,7 +5,6 @@ import { db } from '@/db';
 import { libraryItems, licences } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { signedUrl } from '@/lib/storage';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { Banner, DataString, LicenceBadge, LinkButton, Panel } from '@/components/ui';
 
@@ -92,7 +91,7 @@ export default async function LibraryItem({ params }: { params: Promise<{ id: st
         {!withdrawn ? (
           <div className="mt-10 flex flex-wrap items-center gap-4">
             {hosted ? (
-              <LinkButton href={signedUrl(item.objectKey!)} target="_blank" rel="noopener">
+              <LinkButton href={`/api/library/${id}/file`} target="_blank" rel="noopener">
                 {downloadable ? 'Open the document' : 'Read it here'}
               </LinkButton>
             ) : null}

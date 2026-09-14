@@ -68,6 +68,12 @@ export default async function CuratorConsole() {
           </div>
         ) : null}
 
+        <p className="t-body-sm mt-6">
+          <Link href="/curate/submissions" className="text-ink-900 underline underline-offset-2">
+            Papers contributed by students and faculty
+          </Link>
+        </p>
+
         <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_420px]">
           <div>
             <h2 className="t-h2 m-0 mb-4 text-ink-900">
