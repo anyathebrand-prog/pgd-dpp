@@ -6,6 +6,7 @@ import { alumniProfiles, institutions, libraryItems } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { Banner, LinkButton, Panel, Record } from '@/components/ui';
+import { myChannels } from '@/modules/alumni/queries';
 
 /**
  * AL-01 alumni home (ALM-01, LIB-08).
@@ -43,6 +44,10 @@ export default async function AlumniHome() {
     .select({ n: count() })
     .from(alumniProfiles)
     .where(eq(alumniProfiles.directoryVisible, true));
+
+  // ALM-10. Usually one, but SSO-04 allows a person to have studied at two
+  // institutions, and both channels are theirs.
+  const channels = await myChannels(me.userId);
 
   // "Newly transitioned" is a real state rather than a flag: within a week of
   // the profile being created, this is the first time they have seen any of
@@ -117,6 +122,28 @@ export default async function AlumniHome() {
             )}
           </Record>
 
+          <Record
+            title={channels.length === 1 ? `The ${channels[0].shortName} channel` : 'Your school channels'}
+            meta="Private to graduates of that university"
+          >
+            <p className="t-body-sm mt-0 mb-4 text-ink-700">
+              A noticeboard for people who did the same programme at the same place. Alumni of the
+              other universities can find you in the directory; they cannot read this.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {channels.map((c) => (
+                <LinkButton
+                  key={c.id}
+                  href={`/alumni/school/${c.id}`}
+                  size="dense"
+                  variant="secondary"
+                >
+                  {c.shortName}
+                </LinkButton>
+              ))}
+            </div>
+          </Record>
+
           <Record title="Your certificate" meta="Verifiable by anyone, without an account">
             <p className="t-body-sm mt-0 mb-4 text-ink-700">
               An employer checks the code and sees that it is valid and who issued it. Nothing
@@ -134,8 +161,8 @@ export default async function AlumniHome() {
                 missing beats a nav full of links to empty rooms. */}
             <p className="t-body-sm mt-0 mb-0 text-ink-700">
               The national forum, the jobs board and events are on the roadmap and are not here
-              yet. The directory and the library are, and they are the two things this network is
-              actually for in its first year.
+              yet. The directory, your school channel and the library are, and they are what this
+              network is actually for in its first year.
             </p>
           </Panel>
 

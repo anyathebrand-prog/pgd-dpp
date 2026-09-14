@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { memberships } from '@/db/schema';
+import { institutions, memberships } from '@/db/schema';
 
 /**
  * Reads behind the alumni community.
@@ -33,4 +33,24 @@ export async function mayEnterChannel(userId: string, institutionId: string) {
     )
     .limit(1);
   return Boolean(row);
+}
+
+/**
+ * The channels this person may actually enter.
+ *
+ * Derived from their own memberships rather than from a list of institutions
+ * filtered afterwards: the question "which channels are mine" and the
+ * question "may I enter this one" have to have the same answer, and sharing
+ * `mayEnterChannel` is how that stays true.
+ */
+export async function myChannels(userId: string) {
+  return db
+    .select({
+      id: institutions.id,
+      name: institutions.name,
+      shortName: institutions.shortName,
+    })
+    .from(memberships)
+    .innerJoin(institutions, eq(institutions.id, memberships.institutionId))
+    .where(and(eq(memberships.userId, userId), eq(memberships.role, 'alumni')));
 }

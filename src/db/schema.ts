@@ -895,6 +895,68 @@ export const alumniProfiles = pgTable(
   (t) => [uniqueIndex('alumni_profiles_user_key').on(t.userId)],
 );
 
+/**
+ * ALM-10 / ALM-11 — a school's private channel, and what an institution
+ * broadcasts into it.
+ *
+ * Tenant-scoped, and that is the whole design. ALM-12 says a School A
+ * alumnus may see School B graduates in the national directory and may not
+ * enter School B's channel — so the rows live behind row-level security like
+ * every other institutional record, and the access check happens before the
+ * tenant is set rather than instead of it.
+ *
+ * One table for posts and broadcasts, distinguished by `kind`: they differ in
+ * who may write them and how they are presented, not in what they are, and
+ * two tables would mean two moderation queues for the same job.
+ */
+export const channelPosts = pgTable(
+  'channel_posts',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    kind: text('kind', { enum: ['post', 'broadcast'] })
+      .notNull()
+      .default('post'),
+    title: text('title'),
+    body: text('body').notNull(),
+    /**
+     * ALM-08. Removed rather than deleted: a moderator's decision is a record,
+     * and a post that simply disappears teaches the person who reported it
+     * nothing about whether anyone looked.
+     */
+    removedAt: timestamp('removed_at', { withTimezone: true }),
+    removedReason: text('removed_reason'),
+    removedBy: uuid('removed_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('channel_posts_institution_idx').on(t.institutionId, t.createdAt)],
+);
+
+/** ALM-08. Someone flagged something, and a moderator has to see it. */
+export const contentReports = pgTable(
+  'content_reports',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => channelPosts.id, { onDelete: 'cascade' }),
+    reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'set null' }),
+    reason: text('reason', {
+      enum: ['abusive', 'personal_data', 'off_topic', 'spam', 'other'],
+    }).notNull(),
+    detail: text('detail'),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('content_reports_institution_idx').on(t.institutionId, t.resolvedAt)],
+);
+
 /* -------------------------------------------------------------- compliance */
 
 /** CMP-05. Consent binds to the version of the notice in force at the time. */
