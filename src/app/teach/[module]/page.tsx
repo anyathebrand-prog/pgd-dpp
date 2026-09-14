@@ -8,6 +8,7 @@ import { requireInstitution } from '@/lib/tenant';
 import { publishBlockers } from '@/modules/teaching/actions';
 import { LessonEditor, ModulePublish } from '@/components/teach-panels';
 import { LessonVideo } from '@/components/lesson-video';
+import { AssessmentForm } from '@/components/assessment-panels';
 import { Banner, EmptyState, Panel, Record, cx } from '@/components/ui';
 
 /**
@@ -154,7 +155,7 @@ export default async function ModuleAuthoring({
                       a.timeLimitMinutes ? `${a.timeLimitMinutes} minutes · ` : ''
                     }${a.attemptLimit} attempt${a.attemptLimit === 1 ? '' : 's'} · pass ${a.passMark}%`}
                   >
-                    <p className="t-body-sm m-0 text-ink-700">
+                    <p className="t-body-sm mt-0 mb-4 text-ink-700">
                       {a.published ? 'Visible to students.' : 'Draft.'} Extended time for individual
                       students is granted from the{' '}
                       <Link href="/teach/grading" className="text-ink-900 underline underline-offset-2">
@@ -162,6 +163,12 @@ export default async function ModuleAuthoring({
                       </Link>
                       .
                     </p>
+                    <Link
+                      href={`/teach/${moduleId}/assessment/${a.id}`}
+                      className="t-body-sm font-semibold text-authority underline underline-offset-2"
+                    >
+                      Edit the questions
+                    </Link>
                   </Record>
                 ))}
               </ul>
@@ -173,6 +180,15 @@ export default async function ModuleAuthoring({
           <Panel title="Add a lesson">
             <LessonEditor moduleId={moduleId} />
           </Panel>
+
+          <div className="mt-6">
+            <Panel title="Add an assessment">
+              {/* LRN-04. Until this existed, assessments came only from the
+                  seed — so the whole attempt → auto-mark → grade → release
+                  path ran on data no facilitator could have made. */}
+              <AssessmentForm moduleId={moduleId} locked={false} />
+            </Panel>
+          </div>
         </aside>
       </div>
     </>

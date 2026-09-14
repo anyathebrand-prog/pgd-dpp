@@ -20,7 +20,16 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  /*
+   * Twenty seconds, where the production config uses ten.
+   *
+   * `next dev` compiles a route the first time it is requested, and in a full
+   * suite run that lands inside an assertion — which then fails on the speed
+   * of the toolchain rather than on anything the product did. The same suite
+   * against `next start` needs no such allowance, which is the tell that this
+   * is a dev-server property and not a slow product.
+   */
+  expect: { timeout: 20_000 },
   reporter: [['list']],
   use: {
     baseURL: 'http://unilag.localhost:3000',

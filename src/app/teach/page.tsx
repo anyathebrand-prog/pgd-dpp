@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { withTenant } from '@/db';
-import { assessments, cohorts, lessons, modules, submissions } from '@/db/schema';
+import { announcements, assessments, cohorts, lessons, modules, submissions } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
-import { Banner, EmptyState, LinkButton, Record, cx } from '@/components/ui';
+import { Banner, EmptyState, LinkButton, Panel, Record, cx } from '@/components/ui';
+import { AnnouncementComposer, AnnouncementRemove } from '@/components/announcement-panels';
 
 /**
  * FC-01 facilitator course list.
@@ -58,6 +59,21 @@ export default async function MyModules() {
   const running = await withTenant(institution.id, (tx) =>
     tx.select().from(cohorts).where(inArray(cohorts.status, ['open', 'running'])),
   );
+
+  // LRN-06: what this facilitator has already told their cohorts, newest
+  // first. Scoped to the cohorts that are actually running, so a console does
+  // not slowly fill with notices about intakes that finished years ago.
+  const posted = running.length
+    ? await withTenant(institution.id, (tx) =>
+        tx
+          .select()
+          .from(announcements)
+          .where(inArray(announcements.cohortId, running.map((c) => c.id)))
+          .orderBy(desc(announcements.createdAt))
+          .limit(10),
+      )
+    : [];
+  const cohortNames = new Map(running.map((c) => [c.id, c.name]));
 
   const lessonsBy = new Map(lessonCounts.map((r) => [r.moduleId, Number(r.n)]));
   const waitingBy = new Map(waiting.map((r) => [r.moduleId, Number(r.n)]));
@@ -133,6 +149,43 @@ export default async function MyModules() {
           })}
         </ul>
       )}
+
+      {/* LRN-06. The dashboard has rendered these since the beginning and
+          nothing could write one, so every cohort's announcements were
+          whatever the seed said. */}
+      <h2 className="t-h2 mt-14 mb-4 text-ink-900">Announcements</h2>
+      <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
+        <div>
+          {posted.length === 0 ? (
+            <EmptyState heading="Nothing posted yet">
+              An announcement appears on the dashboard of everyone in the cohort. Use it for a
+              deadline moving, or a session being rescheduled.
+            </EmptyState>
+          ) : (
+            <ul className="m-0 grid list-none gap-4 p-0">
+              {posted.map((a) => (
+                <Record
+                  as="li"
+                  key={a.id}
+                  title={a.title}
+                  meta={`${cohortNames.get(a.cohortId ?? '') ?? 'Cohort'} · ${a.createdAt.toLocaleDateString('en-NG', { day: 'numeric', month: 'long' })}`}
+                >
+                  <p className="t-body-sm mt-0 mb-4 whitespace-pre-line text-ink-900">{a.body}</p>
+                  <AnnouncementRemove announcementId={a.id} title={a.title} />
+                </Record>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <aside>
+          <Panel title="Post an announcement">
+            <AnnouncementComposer
+              cohorts={running.map((c) => ({ id: c.id, name: c.name }))}
+            />
+          </Panel>
+        </aside>
+      </div>
 
       <p className="t-caption mt-10 text-ink-700">
         Everything you do here is recorded against your account, including opening a student&apos;s

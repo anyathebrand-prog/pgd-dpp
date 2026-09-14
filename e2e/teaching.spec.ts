@@ -81,7 +81,11 @@ test.describe('the course list', () => {
     // The UNN facilitator's modules belong to UNN. RLS makes this a matter of
     // the database returning nothing, not of the UI filtering.
     await page.goto('/teach');
-    await expect(page.getByText(/DPP-101/)).toBeVisible();
+    // The module, specifically: the console also lists announcements, which
+    // mention module codes in their own text.
+    await expect(
+      page.getByRole('heading', { name: 'DPP-101 · The NDPA 2023 in practice' }),
+    ).toBeVisible();
     await expect(page.getByText('University of Lagos')).toBeVisible();
   });
 });
@@ -98,11 +102,16 @@ test.describe('content authoring', () => {
     await page.waitForLoadState('networkidle');
 
     const title = `E2E lesson ${RUN}`;
-    await page.getByLabel('Title (required)').fill(title);
-    await page
+    // Scoped to the lesson form: the page now also carries an assessment
+    // composer, which has a "Title" field of its own.
+    const composer = page.locator('form', {
+      has: page.getByRole('button', { name: 'Add lesson' }),
+    });
+    await composer.getByLabel('Title (required)').fill(title);
+    await composer
       .getByLabel(/Lesson content/)
       .fill('Written for the test, long enough to count as content.');
-    await page.getByRole('button', { name: 'Add lesson' }).click();
+    await composer.getByRole('button', { name: 'Add lesson' }).click();
 
     await expect(page.getByText('Lesson added.')).toBeVisible({ timeout: 30_000 });
     // The title also appears in the move buttons' screen-reader labels, so

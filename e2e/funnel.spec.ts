@@ -269,7 +269,14 @@ test.describe('a candidate goes from discovery to enrolled', () => {
     await expect(row).toBeVisible();
     await row.getByRole('link', { name: /Review/ }).click();
 
-    await expect(page.getByRole('heading', { name: candidateName })).toBeVisible();
+    // Wait for the navigation itself before asserting on content. The
+    // assertion has a 10s budget and a dev server compiling this route for the
+    // first time can take longer than that — which fails on the speed of the
+    // toolchain rather than on anything the product did.
+    await page.waitForURL(/\/admin\/applications\/[0-9a-f-]{36}/, { timeout: 45_000 });
+    await expect(page.getByRole('heading', { name: candidateName })).toBeVisible({
+      timeout: 30_000,
+    });
     // CMP-13: documents are reachable only through expiring signed links.
     await expect(page.getByRole('link', { name: /Open .*\.pdf/ }).first()).toBeVisible();
 
