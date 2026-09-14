@@ -878,6 +878,17 @@ export const alumniProfiles = pgTable(
     linkedinUrl: text('linkedin_url'),
     /** ALM-02 / CMP-15: private unless the alumnus opts in. Default is false. */
     directoryVisible: boolean('directory_visible').notNull().default(false),
+    /**
+     * AL-03: "each field individually visibility-controlled, default
+     * private". A single directory toggle would make opting in an
+     * all-or-nothing bargain — your employer's name for the ability to find
+     * a classmate — and CMP-15's privacy-by-default means the granular
+     * answer, not the convenient one.
+     *
+     * Empty means nothing beyond the three facts a directory entry cannot
+     * exist without: name, institution and cohort year.
+     */
+    visibleFields: text('visible_fields').array(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

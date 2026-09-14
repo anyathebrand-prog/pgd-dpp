@@ -240,7 +240,10 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
   if (needsMfa) return { redirectTo: '/login/2fa' };
   if (!user.emailVerifiedAt) return { redirectTo: '/signup/verify' };
   return {
-    redirectTo: user.status === 'student' || user.status === 'alumni' ? '/dashboard' : '/apply',
+    // AL-01 is where an alumnus belongs: the student dashboard reads an
+    // active enrolment, which a graduate does not have.
+    redirectTo:
+      user.status === 'alumni' ? '/alumni' : user.status === 'student' ? '/dashboard' : '/apply',
   };
 }
 

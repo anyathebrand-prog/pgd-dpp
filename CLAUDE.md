@@ -43,10 +43,23 @@ entrance triggered by scrolling. The 240ms ceiling applies there as well — del
 action, commits its writes, and then lands the router on `/`. `redirect()` is still correct during
 *page* render — that is how `requireUser`, `requireRole` and `requireInstitution` work.
 
+**A confirmation cannot live inside the row it is confirming.** When an action removes an
+item from a list — approving a payment, deciding a submission, certifying a graduate — anything
+that re-renders that list unmounts the component holding the "done" message before its effect
+runs, and the item simply vanishes. `revalidatePath` does it, and so does revalidating a
+*sibling* path that shares a layout. Push the outcome into the URL and let the page render it:
+it survives the refresh and a reload. This has been rediscovered three times.
+
 **Tenant data goes through `withTenant()`.** Row-level security is enforced by Postgres, not the
 ORM, so a query without tenant context correctly returns nothing — which looks like an empty page
 rather than an error. Three request-path reads are cross-tenant by design and go through
 `readAcrossTenants(reason, fn)`; adding a fourth needs an argument, not a convenient import.
+
+**Run `npm run db:rls` after every `drizzle-kit push`.** A push that recreates a table drops its
+policies with it, and nothing warns you: the app keeps working, and `tests/isolation.test.ts`
+is what notices. Note that suite is destructive when RLS is off — its "cannot delete another
+tenant's rows" case really does delete them, which is the proof it exists to provide and also a
+reason to `npm run db:reset` afterwards.
 
 **Carrying `institution_id` does not make a table tenant-scoped.** `SHARED_TABLES` wins. Several
 shared tables record it as provenance — which tenant a session was opened against, which

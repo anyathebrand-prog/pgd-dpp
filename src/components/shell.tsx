@@ -43,7 +43,13 @@ export async function TopBar() {
 
         <nav aria-label="Main" className="hidden flex-1 gap-5 md:flex">
           {me
-            ? STUDENT_NAV.map((item) => (
+            ? // An alumnus gets their own home in place of the student
+              // dashboard: that screen reads an active enrolment they no
+              // longer have, and a nav link to a redirect is a small lie.
+              (me.status === 'alumni'
+                ? [{ href: '/alumni', label: 'Alumni' }, ...STUDENT_NAV.slice(1)]
+                : STUDENT_NAV
+              ).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

@@ -85,7 +85,8 @@ function landingFor(me: Principal) {
     ['registry', 'institution_admin', 'facilitator', 'dpo', 'super_admin', 'curator'].includes(role),
   );
   if (staff) return consoleFor(me);
-  return me.status === 'student' || me.status === 'alumni' ? '/dashboard' : '/apply';
+  if (me.status === 'alumni') return '/alumni';
+  return me.status === 'student' ? '/dashboard' : '/apply';
 }
 
 /**
