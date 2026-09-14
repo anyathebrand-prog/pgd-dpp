@@ -64,6 +64,7 @@ Password for all of them: `Passw0rd-seed-2026`
 | `registry@unilag.example.ng` | Admissions queue, `/admin/applications` — **2FA** | `unilag.localhost:3000/login` |
 | `admin@unilag.example.ng` | Institution admin, `/admin` — **2FA** | `unilag.localhost:3000/login` |
 | `dpo@example.ng` | DPO console, `/dpo` — **2FA** | `app.localhost:3000/login` |
+| `curator@example.ng` | Library curation, `/curate` | `app.localhost:3000/login` |
 
 The `unn` accounts mirror these. **Sign in as UNN staff and try to reach a UNILAG record** — that is
 what the two-tenant fixture is for.

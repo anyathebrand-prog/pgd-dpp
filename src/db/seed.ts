@@ -433,6 +433,18 @@ async function main() {
     await db.insert(s.memberships).values({ userId: u.id, institutionId: member.inst.id, role: member.role });
   }
 
+  /**
+   * LIB-05. The curator is a platform role, not an institution's: the corpus
+   * is shared, and §5.7 is explicit that its licensing is a platform-level
+   * responsibility rather than something each university decides for itself.
+   * The membership rows exist because that is where roles live; the role is
+   * in PLATFORM_ROLES, so it holds everywhere.
+   */
+  const curator = await user('curator@example.ng', 'Amina Yusuf', 'staff');
+  for (const inst of institutions) {
+    await db.insert(s.memberships).values({ userId: curator.id, institutionId: inst.id, role: 'curator' });
+  }
+
   const dpo = await user('dpo@example.ng', 'Ngozi Adeyemi', 'staff');
   for (const inst of institutions) {
     await db.insert(s.memberships).values({ userId: dpo.id, institutionId: inst.id, role: 'dpo' });
@@ -601,6 +613,7 @@ async function main() {
   console.log('  facilitator@unilag.example.ng teaching console at /teach, with work to mark');
   console.log('  admin@unilag.example.ng       institution admin console at /admin');
   console.log('  dpo@example.ng                DPO console at http://app.localhost:3000/dpo');
+  console.log('  curator@example.ng            library curator at http://app.localhost:3000/curate');
   console.log('');
   console.log('The UNN accounts mirror these. Try reading a UNILAG record while signed in as UNN.');
 
