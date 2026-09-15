@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
-import { assessments, grades, modules, submissions } from '@/db/schema';
+import { assessments, grades, modules, programmes, submissions } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
+import { DEFAULT_BANDS, bandFor } from '@/lib/grading';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { EmptyState, cx } from '@/components/ui';
 
@@ -34,6 +35,21 @@ export default async function Gradebook() {
       .orderBy(modules.position, submissions.attempt),
   );
 
+  /*
+   * IA-02's grading scheme. It describes a result; it does not decide one —
+   * the pass mark below is the assessment's, and this only puts the
+   * institution's own word against a percentage instead of leaving the
+   * student to work out what 64% means on their programme.
+   */
+  const [programme] = await withTenant(institution.id, (tx) =>
+    tx
+      .select({ bands: programmes.gradingBands })
+      .from(programmes)
+      .where(eq(programmes.institutionId, institution.id))
+      .limit(1),
+  );
+  const bands = programme?.bands?.length ? programme.bands : DEFAULT_BANDS;
+
   return (
     <>
       <TopBar />
@@ -52,7 +68,7 @@ export default async function Gradebook() {
               <caption className="sr-only">Your assessment results by module</caption>
               <thead>
                 <tr className="border-b border-ink-500">
-                  {['Module', 'Assessment', 'Attempt', 'Result', 'Outcome'].map((h) => (
+                  {['Module', 'Assessment', 'Attempt', 'Result', 'Band', 'Outcome'].map((h) => (
                     <th key={h} scope="col" className="t-label px-3 py-3 text-ink-900">
                       {h}
                     </th>
@@ -64,6 +80,7 @@ export default async function Gradebook() {
                   const marked = r.score !== null && r.maxScore !== null;
                   const percent = marked ? (r.score! / r.maxScore!) * 100 : null;
                   const passed = percent !== null && percent >= r.passMark;
+                  const band = percent === null ? null : bandFor(percent, bands);
                   return (
                     <tr key={`${r.assessmentId}-${r.attempt}`} className={cx('border-b border-ink-300', i % 2 === 1 && 'bg-ink-100/40')}>
                       <td className="t-body-sm px-3 py-3 text-ink-700">{r.moduleCode}</td>
@@ -75,6 +92,12 @@ export default async function Gradebook() {
                       <td className="t-body-sm px-3 py-3 text-ink-700">{r.attempt}</td>
                       <td className="t-data px-3 py-3 text-ink-900">
                         {marked ? `${r.score}/${r.maxScore}` : '—'}
+                      </td>
+                      <td className="t-body-sm px-3 py-3 text-ink-700">
+                        {/* Blank rather than invented when a score falls
+                            below every band: the institution did not write a
+                            word for it, so neither do we. */}
+                        {band?.label ?? '—'}
                       </td>
                       <td className="t-body-sm px-3 py-3">
                         {!marked ? (

@@ -248,6 +248,25 @@ export const programmes = pgTable('programmes', {
   summary: text('summary'),
   entryRequirements: text('entry_requirements'),
   durationMonths: integer('duration_months').notNull().default(12),
+  /**
+   * IA-02's grading scheme: the bands a percentage is read through, highest
+   * first. It interprets a result, it does not decide one — the pass mark
+   * lives on each assessment and graduation stays a decision a registrar
+   * makes (see /admin/graduation).
+   *
+   * Stored on the programme rather than in a table of its own because a band
+   * list is read every time a result is rendered and written about once a
+   * decade, and because a classification only means anything in the context
+   * of the programme that awarded it.
+   */
+  gradingBands: jsonb('grading_bands')
+    .$type<{ minPercent: number; label: string }[]>()
+    .notNull()
+    .default([
+      { minPercent: 70, label: 'Distinction' },
+      { minPercent: 60, label: 'Merit' },
+      { minPercent: 50, label: 'Pass' },
+    ]),
   createdAt: createdAt(),
 });
 

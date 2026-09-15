@@ -26,7 +26,24 @@ const slug = `test${String(RUN).slice(-6)}`;
 const tenantAdmin = `vc-${RUN}@example.ng`;
 
 let unilagId = '';
-let previous: { code: string | null; verified: Date | null } = { code: null, verified: null };
+/*
+ * The whole payout block, not just the two columns IA-07 writes last.
+ *
+ * Configuring a payout account rewrites the bank name, account number and
+ * resolved account name as well, and PY-06 renders those to a sponsor about
+ * to move money — so restoring half of them leaves the seeded institution
+ * quoting a simulated account to the offline-payment suite.
+ */
+type Payout = {
+  code: string | null;
+  verified: Date | null;
+  bankName: string | null;
+  bankCode: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
+  sharePercent: number | null;
+};
+let previous: Payout | null = null;
 
 function sql() {
   return postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
@@ -74,10 +91,20 @@ test.beforeAll(async ({ browser, baseURL }) => {
   mkdirSync(join(process.cwd(), '.auth'), { recursive: true });
 
   const db = sql();
-  const [inst] =
-    await db`SELECT id, paystack_subaccount_code, payout_verified_at FROM institutions WHERE slug = 'unilag'`;
+  const [inst] = await db`
+    SELECT id, paystack_subaccount_code, payout_verified_at, bank_name, bank_code,
+           bank_account_number, bank_account_name, paystack_share_percent
+    FROM institutions WHERE slug = 'unilag'`;
   unilagId = inst.id;
-  previous = { code: inst.paystack_subaccount_code, verified: inst.payout_verified_at };
+  previous = {
+    code: inst.paystack_subaccount_code,
+    verified: inst.payout_verified_at,
+    bankName: inst.bank_name,
+    bankCode: inst.bank_code,
+    accountNumber: inst.bank_account_number,
+    accountName: inst.bank_account_name,
+    sharePercent: inst.paystack_share_percent,
+  };
 
   // Start from "not configured", which is the state IA-07 exists to resolve.
   await db`UPDATE institutions SET paystack_subaccount_code = NULL, payout_verified_at = NULL WHERE id = ${unilagId}`;
@@ -90,9 +117,18 @@ test.beforeAll(async ({ browser, baseURL }) => {
 
 test.afterAll(async () => {
   const db = sql();
-  await db`
-    UPDATE institutions SET paystack_subaccount_code = ${previous.code}, payout_verified_at = ${previous.verified}
-    WHERE id = ${unilagId}`;
+  if (previous) {
+    await db`
+      UPDATE institutions SET
+        paystack_subaccount_code = ${previous.code},
+        payout_verified_at = ${previous.verified},
+        bank_name = ${previous.bankName},
+        bank_code = ${previous.bankCode},
+        bank_account_number = ${previous.accountNumber},
+        bank_account_name = ${previous.accountName},
+        paystack_share_percent = ${previous.sharePercent ?? 90}
+      WHERE id = ${unilagId}`;
+  }
   await db`DELETE FROM programmes WHERE institution_id IN (SELECT id FROM institutions WHERE slug = ${slug})`;
   await db`DELETE FROM memberships WHERE institution_id IN (SELECT id FROM institutions WHERE slug = ${slug})`;
   await db`DELETE FROM institutions WHERE slug = ${slug}`;

@@ -244,15 +244,32 @@ test.describe('moderation is the institution’s own', () => {
 
     await adminPage.getByLabel(/Remove it, and say why/).fill('Named a student who had not consented.');
     await adminPage.getByRole('button', { name: 'Remove the post' }).click();
-    await adminPage.waitForLoadState('networkidle');
+
+    /*
+     * Polled rather than read once after `networkidle`.
+     *
+     * The action returns a redirect the client then follows, so the network
+     * can fall idle in the gap between the click and the write landing —
+     * which it does on the first, cold compile of this route and not on a
+     * warm one. Reading the row once at that moment asserts the state of a
+     * request that has not happened yet.
+     */
+    const db = sql();
+    await expect
+      .poll(
+        async () => {
+          const [r] = await db`SELECT removed_at FROM channel_posts WHERE id = ${postId}`;
+          return Boolean(r?.removed_at);
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(true);
     await admin.close();
 
-    const db = sql();
     const [row] = await db`SELECT removed_at, removed_reason FROM channel_posts WHERE id = ${postId}`;
     const [report] = await db`SELECT resolved_at FROM content_reports WHERE post_id = ${postId}`;
     await db.end();
 
-    expect(row.removed_at).toBeTruthy();
     expect(row.removed_reason).toContain('consented');
     // Removing the post answers every report about it.
     expect(report.resolved_at).toBeTruthy();
