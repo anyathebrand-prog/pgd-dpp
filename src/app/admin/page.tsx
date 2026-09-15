@@ -1,7 +1,14 @@
 import Link from 'next/link';
-import { eq, inArray, sql } from 'drizzle-orm';
-import { withTenant } from '@/db';
-import { applications, cohorts, feeItems, modules, transactions } from '@/db/schema';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { db, withTenant } from '@/db';
+import {
+  applications,
+  cohorts,
+  feeItems,
+  memberships,
+  modules,
+  transactions,
+} from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { Banner, Naira, Panel, cx } from '@/components/ui';
@@ -79,6 +86,24 @@ export default async function AdminHome() {
     tx.select({ n: sql<number>`count(*)::int` }).from(modules).where(eq(modules.published, true)),
   );
 
+  /*
+   * IA-05. `memberships` is a shared table, so this is a plain read scoped by
+   * institution rather than a `withTenant` one.
+   *
+   * An institution where the administrator is also the registrar and the
+   * facilitator works, right up to the morning that person is unavailable and
+   * every admission decision stops.
+   */
+  const staff = await db
+    .select({ role: memberships.role })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.institutionId, institution.id),
+        inArray(memberships.role, ['registry', 'facilitator']),
+      ),
+    );
+
   const setup = [
     {
       label: 'Application fee set',
@@ -104,6 +129,12 @@ export default async function AdminHome() {
       href: '/admin/payouts',
       why: 'Without a verified subaccount, money collected has nowhere to settle to. This blocks taking payment at all.',
       blocking: true,
+    },
+    {
+      label: 'Somebody besides you can work here',
+      done: staff.length > 0,
+      href: '/admin/staff',
+      why: 'Every application review and every lesson is yours alone until a registry officer or a facilitator is appointed.',
     },
     {
       label: 'Branding set',

@@ -51,6 +51,14 @@ export const institutions = pgTable(
     bankName: text('bank_name'),
     bankAccountName: text('bank_account_name'),
     bankAccountNumber: text('bank_account_number'),
+    /** PAY-06. The bank's Paystack code, needed to resolve and to pay out. */
+    bankCode: text('bank_code'),
+    /**
+     * PAY-06. When the account name was last resolved with the bank and
+     * confirmed by a person. Null means nobody has ever confirmed it, which
+     * IA-07 treats as "not configured" however complete the other fields look.
+     */
+    payoutVerifiedAt: timestamp('payout_verified_at', { withTimezone: true }),
     /**
      * SSO-02. The shared secret a university's portal signs its handoff tokens
      * with. Tier 2 exists because most Nigerian university portals are bespoke
@@ -61,6 +69,18 @@ export const institutions = pgTable(
      * every token rather than falling back to something weaker.
      */
     ssoSharedSecret: text('sso_shared_secret'),
+    /**
+     * CMP-17's quarterly access re-attestation (IA-05).
+     *
+     * One timestamp per institution rather than one per membership, because
+     * the thing being attested is the *list* — "these are the people who
+     * should have access, and nobody else does". A per-row date answers a
+     * different and weaker question, and would go stale silently as rows are
+     * added. The audit entry written alongside it records who held what at
+     * that moment, which is what an assessor actually asks for.
+     */
+    accessReviewedAt: timestamp('access_reviewed_at', { withTimezone: true }),
+    accessReviewedBy: uuid('access_reviewed_by'),
     /** §5.1: an offer lapses if the acceptance fee is unpaid within N days. */
     offerExpiryDays: integer('offer_expiry_days').notNull().default(14),
     status: text('status', { enum: ['provisioning', 'live', 'suspended'] })

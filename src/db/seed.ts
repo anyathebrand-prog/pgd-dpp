@@ -445,6 +445,16 @@ async function main() {
     await db.insert(s.memberships).values({ userId: curator.id, institutionId: inst.id, role: 'curator' });
   }
 
+  /**
+   * SA-01. There was no super admin in the seed at all, which meant the one
+   * role that provisions institutions had never been signed into — and the
+   * console it lands on was a 404 nobody noticed.
+   */
+  const superAdmin = await user('platform@example.ng', 'Bisi Adewale', 'staff');
+  for (const inst of institutions) {
+    await db.insert(s.memberships).values({ userId: superAdmin.id, institutionId: inst.id, role: 'super_admin' });
+  }
+
   const dpo = await user('dpo@example.ng', 'Ngozi Adeyemi', 'staff');
   for (const inst of institutions) {
     await db.insert(s.memberships).values({ userId: dpo.id, institutionId: inst.id, role: 'dpo' });
@@ -614,6 +624,7 @@ async function main() {
   console.log('  admin@unilag.example.ng       institution admin console at /admin');
   console.log('  dpo@example.ng                DPO console at http://app.localhost:3000/dpo');
   console.log('  curator@example.ng            library curator at http://app.localhost:3000/curate');
+  console.log('  platform@example.ng           super admin at http://app.localhost:3000/platform/tenants');
   console.log('');
   console.log('The UNN accounts mirror these. Try reading a UNILAG record while signed in as UNN.');
 

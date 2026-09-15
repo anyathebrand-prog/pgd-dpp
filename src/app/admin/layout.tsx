@@ -20,6 +20,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // without a TOTP-satisfied session.
   const me = await requireRole('registry', 'institution_admin', 'facilitator');
 
+  /*
+   * Staff and payouts are institution_admin only — the pages enforce it, and
+   * the nav agrees rather than offering a registry officer two links that
+   * bounce them to /no-access. A menu item you are not allowed to open reads
+   * as a fault in the product, not as a boundary.
+   */
+  const isAdmin = me.roles.includes('institution_admin');
   const nav = [
     { href: '/admin/applications', label: 'Applications' },
     { href: '/admin/cohorts', label: 'Cohorts' },
@@ -27,6 +34,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/alumni', label: 'Alumni' },
     { href: '/admin/fees', label: 'Fees' },
     { href: '/admin/branding', label: 'Branding' },
+    ...(isAdmin
+      ? [
+          { href: '/admin/staff', label: 'Staff' },
+          { href: '/admin/payouts', label: 'Payouts' },
+        ]
+      : []),
     { href: '/admin/payments/offline', label: 'Offline payments' },
     { href: '/admin/reconciliation', label: 'Reconciliation' },
   ];
