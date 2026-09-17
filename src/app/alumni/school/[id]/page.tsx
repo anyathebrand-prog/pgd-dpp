@@ -8,6 +8,8 @@ import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { Banner, EmptyState, Panel, Record } from '@/components/ui';
 import { ChannelComposer, ReportControl } from '@/components/channel-panels';
 import { mayEnterChannel } from '@/modules/alumni/queries';
+import { flagEnabled } from '@/lib/flags';
+import { FeatureOff } from '@/components/feature-off';
 
 /**
  * AL-05 school channel (ALM-10, ALM-12).
@@ -35,6 +37,23 @@ export default async function SchoolChannel({ params }: { params: Promise<{ id: 
     .where(eq(institutions.id, id))
     .limit(1);
   if (!institution) notFound();
+
+  /*
+   * SA-03. Checked after membership rather than before it: whether this
+   * channel is switched on is not something a stranger is entitled to learn,
+   * and answering "turned off" to someone who may not enter would confirm the
+   * institution exists and has a channel.
+   */
+  if (!(await flagEnabled('school_channels', institution.id))) {
+    return (
+      <FeatureOff title="School channel" institution={institution.shortName}>
+        <p>
+          The {institution.shortName} channel is closed at the moment. Nothing posted in it has been
+          deleted — if it reopens, the thread is as you left it.
+        </p>
+      </FeatureOff>
+    );
+  }
 
   const posts = await withTenant(id, (tx) =>
     tx

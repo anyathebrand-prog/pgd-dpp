@@ -5,6 +5,8 @@ import { db, withTenant } from '@/db';
 import { institutions, transactions } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
+import { flagEnabled } from '@/lib/flags';
+import { FeatureOff } from '@/components/feature-off';
 import { TopBar, Footer } from '@/components/shell';
 import { ActionForm } from '@/components/form';
 import { Banner, DataString, Field, Input, Naira, Panel, Record } from '@/components/ui';
@@ -31,6 +33,21 @@ export default async function OfflinePaymentPage({
   const me = await requireUser();
   const institution = await requireInstitution();
   const { ref, submitted } = await searchParams;
+
+  // SA-03. The consequence named on the flags console: turning this off
+  // strands anyone mid-transfer, so the copy here points them at the channel
+  // that still works rather than at a closed door.
+  if (!(await flagEnabled('offline_payments', institution.id))) {
+    return (
+      <FeatureOff title="Pay by bank transfer" institution={institution.shortName}>
+        <p>
+          Bank transfer is not being accepted here at the moment. You can still pay by card, and if
+          you have already sent a transfer it is still in the queue to be approved — it has not
+          been lost.
+        </p>
+      </FeatureOff>
+    );
+  }
 
   const owed = await withTenant(institution.id, (tx) =>
     tx

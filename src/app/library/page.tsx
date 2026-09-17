@@ -3,6 +3,8 @@ import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db';
 import { libraryItems, licences } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
+import { currentInstitution } from '@/lib/tenant';
+import { recordSearch } from '@/modules/library/search-log';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { EmptyState, Input, LicenceBadge, Panel, Record, cx } from '@/components/ui';
 
@@ -61,6 +63,22 @@ export default async function Library({
     })
     .from(libraryItems)
     .where(eq(libraryItems.status, 'published'));
+
+  /*
+   * LIB-02: the zero-result signal the empty state below promises is kept.
+   * Recorded after the query rather than before it, because the count is the
+   * half of the event that matters — and with no data subject attached, per
+   * §6.3 and the table's own note.
+   */
+  if (q) {
+    const inst = await currentInstitution();
+    await recordSearch({
+      query: q,
+      institutionId: inst?.id ?? null,
+      filters: { jurisdiction: jurisdiction ?? null, type: type ?? null },
+      resultCount: rows.length,
+    });
+  }
 
   const jurisdictions = [...new Set(facets.map((f) => f.jurisdiction).filter(Boolean))].sort();
   const types = [...new Set(facets.map((f) => f.instrumentType).filter(Boolean))].sort();

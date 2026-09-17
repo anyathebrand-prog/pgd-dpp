@@ -4,6 +4,8 @@ import { withTenant } from '@/db';
 import { enrollments, liveSessions } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
+import { flagEnabled } from '@/lib/flags';
+import { FeatureOff } from '@/components/feature-off';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { Banner, EmptyState, Panel, Record, cx } from '@/components/ui';
 import { JoinButton } from '@/components/session-panels';
@@ -23,6 +25,19 @@ import { JoinButton } from '@/components/session-panels';
 export default async function LiveSessions() {
   const me = await requireUser();
   const institution = await requireInstitution();
+
+  // SA-03. Off means the schedule is hidden; attendance already recorded is
+  // untouched, because it is evidence rather than a listing.
+  if (!(await flagEnabled('live_sessions', institution.id))) {
+    return (
+      <FeatureOff title="Live sessions" institution={institution.shortName}>
+        <p>
+          Live sessions are not running here at the moment. Any attendance already recorded against
+          you is kept.
+        </p>
+      </FeatureOff>
+    );
+  }
 
   const [enrolment] = await withTenant(institution.id, (tx) =>
     tx

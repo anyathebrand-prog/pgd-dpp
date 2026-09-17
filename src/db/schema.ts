@@ -1166,6 +1166,82 @@ export const processingActivities = pgTable('processing_activities', {
 });
 
 /** CMP-10. The purge job reports against this, and DP-07 renders it. */
+/**
+ * SA-03 feature flags (§5.9).
+ *
+ * The catalogue of flags lives in code (`src/lib/flags.ts`) and only their
+ * *state* lives here, which is the right way round: a flag is a branch in the
+ * product, so a row naming a flag the code has never heard of is a typo with
+ * a database table behind it, not a feature.
+ *
+ * Two levels, and both are needed. The platform row is the kill switch — a
+ * feature going wrong at three in the morning is turned off for everybody in
+ * one place. The override is per institution, because rollout is the ordinary
+ * case: a university that has not agreed to run alumni channels should not
+ * have them appear because a different university was ready.
+ */
+export const featureFlags = pgTable(
+  'feature_flags',
+  {
+    id: id(),
+    key: text('key').notNull(),
+    enabled: boolean('enabled').notNull(),
+    /** Who turned it, and when — a flag flip is a deploy without a commit. */
+    changedBy: uuid('changed_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('feature_flags_key_key').on(t.key)],
+);
+
+export const featureFlagOverrides = pgTable(
+  'feature_flag_overrides',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    enabled: boolean('enabled').notNull(),
+    changedBy: uuid('changed_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('feature_flag_overrides_key').on(t.institutionId, t.key)],
+);
+
+/**
+ * LIB-02 / SA-02: what people looked for in the library and did not find.
+ *
+ * LB-01 already tells a reader that "searches that return nothing are logged
+ * and reviewed by the curator — this is how the collection decides what to
+ * acquire next". Nothing logged them, which made that sentence a claim the
+ * product did not keep.
+ *
+ * **There is deliberately no `user_id` here.** §6.3 requires platform
+ * analytics to be aggregated or pseudonymised before they leave tenant scope,
+ * and a search history attached to a person is a profile — on this product, a
+ * profile of what a named privacy professional was researching. The query and
+ * the result count answer the curation question completely; the identity adds
+ * nothing to it and a great deal to the consequences of a breach.
+ *
+ * `institution_id` is provenance, not scope: the catalogue is shared, so a
+ * search is not an institution's record.
+ */
+export const searchEvents = pgTable(
+  'search_events',
+  {
+    id: id(),
+    institutionId: uuid('institution_id').references(() => institutions.id, {
+      onDelete: 'set null',
+    }),
+    query: text('query').notNull(),
+    /** Facets in play, so "nothing found" can be told from "nothing found *in Lagos*". */
+    filters: jsonb('filters').$type<Record<string, unknown>>().notNull().default({}),
+    resultCount: integer('result_count').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('search_events_results_idx').on(t.resultCount, t.createdAt)],
+);
+
 export const retentionRules = pgTable('retention_rules', {
   id: id(),
   entity: text('entity').notNull(),
@@ -1225,5 +1301,15 @@ export const SHARED_TABLES = [
   'breaches',
   'processing_activities',
   'retention_rules',
+  // Provenance only, and no data subject in it at all — see searchEvents.
+  'search_events',
+  /*
+   * Platform configuration, not tenant data. `feature_flag_overrides` carries
+   * an institution_id and is still shared: a super admin sets every row from
+   * the platform host where no tenant is in scope, and RLS there would mean
+   * the flags console could never read what it had just written.
+   */
+  'feature_flags',
+  'feature_flag_overrides',
   'audit_log',
 ] as const;

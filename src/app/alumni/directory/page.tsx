@@ -3,6 +3,9 @@ import { and, asc, eq, ilike, type SQL } from 'drizzle-orm';
 import { db } from '@/db';
 import { alumniProfiles, institutions, users } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
+import { currentInstitution } from '@/lib/tenant';
+import { flagEnabled } from '@/lib/flags';
+import { FeatureOff } from '@/components/feature-off';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
 import { Banner, EmptyState, Input, LinkButton, Panel, Record, cx } from '@/components/ui';
 
@@ -28,6 +31,25 @@ export default async function Directory({
 }) {
   const me = await requireUser();
   const { q, institution: institutionSlug, specialisation } = await searchParams;
+
+  /*
+   * SA-03, resolved against the viewer's own institution. The directory is
+   * national, so there is no single tenant to ask — the question this answers
+   * is whether the university whose graduate is looking has agreed to take
+   * part, and it would be the wrong way round to show them everyone else's
+   * graduates while their own are withheld.
+   */
+  const viewerInstitution = await currentInstitution();
+  if (!(await flagEnabled('alumni_directory', viewerInstitution?.id ?? null))) {
+    return (
+      <FeatureOff title="Alumni directory" institution={viewerInstitution?.shortName ?? 'This institution'}>
+        <p>
+          The directory is not open here at the moment. What you chose to share is kept exactly as
+          you set it, so nobody has to opt in a second time.
+        </p>
+      </FeatureOff>
+    );
+  }
 
   const [mine] = await db
     .select()
