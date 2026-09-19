@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { db, withTenant } from '@/db';
 import { documents, transactions, users } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
@@ -50,6 +50,28 @@ export default async function OfflineApprovals({
       .orderBy(asc(transactions.updatedAt)),
   );
 
+  /*
+   * Settled by card while a transfer proof was waiting.
+   *
+   * PAY-03 makes a signed webhook the source of truth, so these settle
+   * themselves and leave the queue above. The sponsor may well have sent the
+   * transfer too — so the institution is holding money it has to give back,
+   * and without this list nobody would ever see it.
+   */
+  const doublePaid = await withTenant(institution.id, (tx) =>
+    tx
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.institutionId, institution.id),
+          eq(transactions.status, 'success'),
+          sql`${transactions.metadata} ? 'probableDoublePayment'`,
+        ),
+      )
+      .orderBy(asc(transactions.updatedAt)),
+  );
+
   const proofIds = queue
     .map((t) => (t.metadata.offline as { proofDocumentId?: string } | undefined)?.proofDocumentId)
     .filter((id): id is string => Boolean(id));
@@ -61,7 +83,9 @@ export default async function OfflineApprovals({
     : [];
 
   // `users` is shared, so this needs no tenant context.
-  const payerIds = [...new Set(queue.map((t) => t.userId))];
+  // Both lists: the settled-twice rows below are people too, and a name is
+  // the only way staff can tell whose refund it is.
+  const payerIds = [...new Set([...queue, ...doublePaid].map((t) => t.userId))];
   const payers = payerIds.length
     ? await db
         .select({ id: users.id, fullName: users.fullName, email: users.email })
@@ -197,7 +221,7 @@ export default async function OfflineApprovals({
                     </div>
                   ) : null}
 
-                  {confirmed && !mismatch ? (
+                  {confirmed ? (
                     <div className="mb-5">
                       <Banner tone="warning" title="Paystack has also confirmed a card payment for this">
                         <p>
@@ -206,11 +230,10 @@ export default async function OfflineApprovals({
                             : 'A card payment'}{' '}
                           on this same reference was confirmed by Paystack on{' '}
                           {new Date(confirmed.receivedAt).toLocaleDateString('en-NG')}
-                          {confirmed.paystackId ? ` (transaction ${confirmed.paystackId})` : ''}. That
-                          is stronger evidence than a transfer screenshot. It usually means the card
-                          checkout looked like it failed and the candidate paid again by transfer —
-                          approve this, then check the bank statement for the transfer and refund it
-                          if it arrived.
+                          {confirmed.paystackId ? ` (transaction ${confirmed.paystackId})` : ''}. A
+                          matching card payment settles on its own, so this row is here because the
+                          amount did not match — reconcile it with Paystack before deciding, and
+                          check the bank statement for a transfer as well.
                         </p>
                       </Banner>
                     </div>
@@ -246,6 +269,58 @@ export default async function OfflineApprovals({
           })}
         </ul>
       )}
+
+      {doublePaid.length > 0 ? (
+        <section className="mt-16">
+          <h2 className="t-h2 mt-0 mb-2 text-ink-900">Probably paid twice</h2>
+          <p className="t-body measure mt-0 mb-6 text-ink-700">
+            These settled by card while a transfer proof was waiting here. The card payment is the
+            one that counted — but if the transfer arrived as well, this institution is holding
+            money it has to give back. Check the bank statement for each, and refund what is there.
+          </p>
+          <ul className="m-0 grid list-none gap-5 p-0">
+            {doublePaid.map((txn) => {
+              const pending = (
+                (txn.metadata.probableDoublePayment as
+                  | { pendingTransferProof?: { payerName?: string; paidOn?: string } }
+                  | undefined)?.pendingTransferProof ?? {}
+              ) as { payerName?: string; paidOn?: string };
+              return (
+                <li key={txn.id}>
+                  <Record
+                    title={`${payers.find((p) => p.id === txn.userId)?.fullName ?? 'Unknown payer'} — ${
+                      txn.context === 'application' ? 'application fee' : 'tuition'
+                    }`}
+                    meta={`Settled ${txn.paidAt?.toLocaleDateString('en-NG') ?? ''} by card`}
+                  >
+                    <dl className="m-0 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
+                      <div>
+                        <dt className="t-caption m-0 text-ink-700">Amount</dt>
+                        <dd className="m-0 ml-0 text-ink-900">
+                          <Naira kobo={txn.amountKobo} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="t-caption m-0 text-ink-700">Reference</dt>
+                        <dd className="m-0 ml-0">
+                          <DataString value={txn.reference} label="Payment reference" />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="t-caption m-0 text-ink-700">Transfer claimed by</dt>
+                        <dd className="t-body-sm m-0 ml-0 text-ink-900">
+                          {pending.payerName ?? '—'}
+                          {pending.paidOn ? ` · ${pending.paidOn}` : ''}
+                        </dd>
+                      </div>
+                    </dl>
+                  </Record>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <p className="t-body-sm mt-10">
         <Link href="/admin" className="text-ink-700 underline underline-offset-2">

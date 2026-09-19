@@ -388,23 +388,70 @@ describe('settlement leaves an audit trail', () => {
  * — so these tests assert that the offline route produces the same end state
  * as the card route, and that nothing settles without a person.
  */
-describe('offline transfers settle through the same path, and only with a person', () => {
-  it('will not settle from a webhook while it is awaiting approval', async () => {
+describe('offline transfers settle through the same path, with a person or with Paystack', () => {
+  /*
+   * Policy, decided deliberately: a signed `charge.success` settles a
+   * reference that is awaiting transfer approval.
+   *
+   * This replaces an earlier rule that nothing settled such a row without a
+   * person. The distinction that makes it safe is what "awaiting approval"
+   * does *not* mean here: a webhook is Paystack confirming that card money
+   * arrived, verified by HMAC, and PAY-03 makes it the source of truth. A
+   * transfer proof — a screenshot — still needs IA-09 and a human, and the
+   * tests below hold that.
+   */
+  it('settles from a signed webhook, and flags the transfer as a probable double payment', async () => {
     const app = await makeApplication('offer_accepted');
     const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
     await adminDb
       .update(transactions)
-      .set({ status: 'awaiting_approval', channel: 'offline_transfer' })
+      .set({
+        status: 'awaiting_approval',
+        channel: 'offline_transfer',
+        metadata: { offline: { payerName: 'A Sponsor', paidOn: '2026-09-01' } },
+      })
       .where(eq(transactions.id, txn.id));
 
-    // A late webhook, a retried delivery, or anything else arriving on its own
-    // must not settle a payment that a human has not checked against a bank
-    // statement — which is the entire point of the queue.
-    const res = await POST(delivery('charge.success', txn.reference));
+    const res = await POST(delivery('charge.success', txn.reference, { amountKobo: TUITION_KOBO }));
+    expect(res.status).toBe(200);
+
+    const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
+    expect(after.status).toBe('success');
+    // It settled by card, whatever the row said while the proof waited.
+    expect(after.channel).toBe('paystack');
+    // Somebody may well have sent the transfer too. Silence here is how that
+    // goes unrefunded.
+    expect(after.metadata).toMatchObject({
+      probableDoublePayment: { settledBy: 'paystack' },
+    });
+
+    const enrolled = await adminDb
+      .select()
+      .from(enrollments)
+      .where(eq(enrollments.userId, userId));
+    expect(enrolled).toHaveLength(1);
+  });
+
+  it('but a row held for an amount mismatch still waits for a person', async () => {
+    const app = await makeApplication('offer_accepted');
+    const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
+    await adminDb
+      .update(transactions)
+      .set({
+        status: 'awaiting_approval',
+        channel: 'paystack',
+        metadata: { amountMismatch: { expected: TUITION_KOBO, received: 100 } },
+      })
+      .where(eq(transactions.id, txn.id));
+
+    // A later event agreeing with the wrong amount is not a resolution of the
+    // mismatch — that is a person's to settle.
+    const res = await POST(delivery('charge.success', txn.reference, { amountKobo: TUITION_KOBO }));
     expect(res.status).toBe(200);
 
     const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
     expect(after.status).toBe('awaiting_approval');
+    expect(after.metadata).toMatchObject({ paystackConfirmation: {} });
     const enrolled = await adminDb
       .select()
       .from(enrollments)
@@ -529,7 +576,7 @@ describe('a real payment is never lost to the dedupe index', () => {
     expect(after.status).toBe('success');
   });
 
-  it('a card payment on a reference awaiting transfer approval is recorded, not dropped', async () => {
+  it('a card payment on a reference awaiting transfer approval is not dropped', async () => {
     const app = await makeApplication('offer_accepted');
     const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
     await adminDb
@@ -538,18 +585,14 @@ describe('a real payment is never lost to the dedupe index', () => {
       .where(eq(transactions.id, txn.id));
 
     // Card checkout looked like it failed, the candidate paid again by
-    // transfer, and then the bank authorisation landed late.
+    // transfer, and then the bank authorisation landed late. It used to be
+    // discarded and the event marked processed, so Paystack never retried.
     const res = await POST(
       delivery('charge.success', txn.reference, { amountKobo: TUITION_KOBO }),
     );
     expect(res.status).toBe(200);
 
     const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
-    // Still waiting for a person — the rule the test above holds.
-    expect(after.status).toBe('awaiting_approval');
-    // But no longer silently discarded: the person deciding can see it.
-    expect(after.metadata).toMatchObject({
-      paystackConfirmation: { amountKobo: TUITION_KOBO },
-    });
+    expect(after.status).toBe('success');
   });
 });

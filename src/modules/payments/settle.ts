@@ -58,26 +58,29 @@ export async function settleTransaction(params: {
     if (txn.status === 'success') return { outcome: 'already_settled' as const };
 
     /*
-     * An offline transfer waits in `awaiting_approval` until a human approves
-     * it, so that state settles here — but only from IA-09. A webhook arriving
-     * for a reference parked awaiting approval would be settling a payment
-     * nobody has checked, and tests/payments.test.ts holds that line.
+     * `awaiting_approval` and a signed webhook.
      *
-     * What it must not do is *discard* the event. It used to return here with
-     * nothing written, the route then marked the event processed, Paystack
-     * stopped retrying, and a real card payment was simply not recorded
-     * anywhere a person would look. The route to that is ordinary: card
-     * checkout appears to fail, the candidate switches to transfer and uploads
-     * proof — which rewrites this same row — and then the bank authorisation
-     * lands late.
+     * A signed `charge.success` is Paystack saying card money arrived, and
+     * PAY-03 makes the webhook the source of truth — so it settles, rather
+     * than waiting for a person to approve what the bank has already
+     * confirmed. The route here is ordinary: card checkout appears to fail,
+     * the candidate switches to transfer and uploads proof, which rewrites
+     * this same row, and then the bank authorisation lands late.
      *
-     * So the confirmation is written onto the row, where IA-09 shows it to the
-     * person deciding. They approve with better evidence than a screenshot,
-     * and know to look for a second payment to refund. Still nothing settles
-     * without them.
+     * Two things this does not do.
+     *
+     * It does not settle a *transfer*. Nothing in this branch is reachable
+     * without a signed webhook; an offline proof still needs IA-09 and a
+     * person, because a screenshot is not evidence that money moved.
+     *
+     * And it does not settle a row parked here by an amount mismatch. That
+     * state is a human's to resolve, and a later event agreeing with the
+     * wrong amount is not a resolution.
      */
+    let supersededTransfer: Record<string, unknown> | null = null;
     if (txn.status === 'awaiting_approval' && !params.approvedBy) {
-      if (params.paystackId || params.amountKobo != null) {
+      const priorMismatch = Boolean((txn.metadata as Record<string, unknown>)?.amountMismatch);
+      if (priorMismatch) {
         await tx
           .update(transactions)
           .set({
@@ -92,8 +95,16 @@ export async function settleTransaction(params: {
             updatedAt: new Date(),
           })
           .where(eq(transactions.id, txn.id));
+        return { outcome: 'awaiting_approval' as const };
       }
-      return { outcome: 'awaiting_approval' as const };
+
+      // Kept so IA-09 and the candidate's own record show that a transfer was
+      // also in flight. If it arrived too, somebody has paid twice and the
+      // institution has to refund one of them — silence here is how that goes
+      // unnoticed.
+      supersededTransfer = (txn.metadata as Record<string, unknown>)?.offline
+        ? { ...((txn.metadata as Record<string, unknown>).offline as Record<string, unknown>) }
+        : null;
     }
 
     // Never trust the amount in the callback over the amount we charged. A
@@ -117,6 +128,20 @@ export async function settleTransaction(params: {
         status: 'success',
         paystackId: params.paystackId ?? null,
         paidAt: params.paidAt ?? new Date(),
+        ...(supersededTransfer
+          ? {
+              // It settled by card, whatever the row said while the proof was
+              // waiting.
+              channel: 'paystack' as const,
+              metadata: {
+                ...txn.metadata,
+                probableDoublePayment: {
+                  settledBy: 'paystack',
+                  pendingTransferProof: supersededTransfer,
+                },
+              },
+            }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(transactions.id, txn.id));
