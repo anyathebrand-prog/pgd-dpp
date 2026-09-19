@@ -11,7 +11,12 @@ import { DocumentSlot } from '@/components/document-slot';
 import { Banner, LinkButton } from '@/components/ui';
 
 /** AP-05. */
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ photo?: string }>;
+}) {
+  const { photo } = await searchParams;
   const me = await requireUser();
   const institution = await requireInstitution();
   const app = await getOrCreateApplication(institution.id, me.userId);
@@ -33,6 +38,17 @@ export default async function DocumentsPage() {
       title="Documents"
       intro="Five items. Photograph each page in good light if you do not have a scan — a readable photo is better than a dark scan."
     >
+      {photo === 'saved' ? (
+        <div className="mb-6">
+          <Banner tone="verified" title="Your photograph is on your application">
+            <p>
+              Cropped to 35 by 45 and large enough to print. It is used for your ID card, exam
+              identity and certificate — and not for facial recognition.
+            </p>
+          </Banner>
+        </div>
+      ) : null}
+
       <Banner tone="info" title="How these are stored">
         <p>
           Files are encrypted at rest and are never publicly addressable. Registry staff open them
@@ -51,6 +67,7 @@ export default async function DocumentsPage() {
             hint={d.hint}
             existing={current.get(d.kind) ?? null}
             query={queryFor.get(d.kind) ?? null}
+            cropHref={d.kind === 'passport_photo' ? '/apply/documents/photo' : undefined}
           />
         ))}
       </ul>

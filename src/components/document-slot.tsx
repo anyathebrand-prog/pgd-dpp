@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import Link from 'next/link';
 import { Button, cx } from './ui';
 import type { ActionState } from './form';
 
@@ -23,6 +24,7 @@ export function DocumentSlot({
   hint,
   existing,
   query,
+  cropHref,
 }: {
   action: (prev: ActionState, form: FormData) => Promise<ActionState>;
   kind: string;
@@ -30,6 +32,8 @@ export function DocumentSlot({
   hint: string;
   existing?: { filename: string; sizeBytes: number; scanStatus: string } | null;
   query?: string | null;
+  /** AP-06. Only the photograph has one: a crop tool of its own. */
+  cropHref?: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, undefined);
   const inputId = `file-${kind}`;
@@ -103,6 +107,17 @@ export function DocumentSlot({
           {pending ? 'Uploading' : existing ? 'Replace' : 'Upload'}
         </Button>
       </form>
+
+      {cropHref ? (
+        <p className="t-body-sm mt-3 mb-0">
+          {/* AP-05 → AP-06. A photograph uploaded straight from a camera roll
+              is rarely 35×45, and the crop tool is where that is fixed rather
+              than at ID-card time. */}
+          <Link href={cropHref} className="text-ink-900 underline underline-offset-2">
+            {existing ? 'Crop it again' : 'Crop it to a passport photograph'}
+          </Link>
+        </p>
+      ) : null}
     </li>
   );
 }
