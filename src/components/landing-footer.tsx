@@ -1,0 +1,95 @@
+import Link from 'next/link';
+
+/**
+ * The PB-01 footer.
+ *
+ * The product's Footer is four links and the DPO's address, which is right for
+ * a page someone is working in. A landing page is also where an institution's
+ * procurement officer and a data subject arrive, and both of them are looking
+ * for a specific column rather than a row of links.
+ */
+const COLUMNS: { heading: string; links: { href: string; label: string; external?: boolean }[] }[] = [
+  {
+    heading: 'The programme',
+    links: [
+      { href: '/programmes', label: 'Institutions and intakes' },
+      { href: '/#study', label: 'What you study' },
+      { href: '/#how', label: 'How it works' },
+      { href: '/#faq', label: 'Questions and answers' },
+    ],
+  },
+  {
+    heading: 'Verification',
+    links: [
+      { href: '/verify', label: 'Verify a certificate' },
+      { href: '/login', label: 'Log in' },
+      { href: '/integrations', label: 'Connect a portal' },
+    ],
+  },
+  {
+    heading: 'Data protection',
+    links: [
+      { href: '/privacy', label: 'Privacy notice' },
+      { href: '/trust', label: 'Trust and compliance' },
+      { href: '/library/takedown', label: 'Report content' },
+      { href: 'https://ndpc.gov.ng/', label: 'ndpc.gov.ng', external: true },
+    ],
+  },
+];
+
+export function LandingFooter() {
+  return (
+    <footer className="mt-20 border-t border-ink-300 bg-ink-900 text-surface">
+      <div className="mx-auto max-w-marketing px-4 py-12 md:px-8">
+        <div className="grid gap-10 md:grid-cols-[1.3fr_repeat(3,1fr)]">
+          <div>
+            <p className="t-label m-0 flex items-center gap-2">
+              <span className="inline-block h-5 w-1.5 bg-surface" aria-hidden="true" />
+              PGD-DPP
+            </p>
+            <p className="t-body-sm measure mt-3 mb-0 text-surface/80">
+              A Post Graduate Diploma in Data Protection &amp; Privacy, run by accredited Nigerian
+              universities on one platform. Each university admits, teaches and awards; the platform
+              handles admissions, payments, the library and verification.
+            </p>
+          </div>
+
+          {COLUMNS.map((column) => (
+            <nav key={column.heading} aria-label={column.heading}>
+              <h2 className="t-label m-0 mb-3">{column.heading}</h2>
+              <ul className="m-0 list-none space-y-2 p-0">
+                {column.links.map((link) => (
+                  <li key={link.href}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        rel="noopener"
+                        className="t-body-sm text-surface/80 underline underline-offset-2 hover:text-surface"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="t-body-sm text-surface/80 underline underline-offset-2 hover:text-surface"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
+
+        <div className="mt-10 border-t border-surface/20 pt-6">
+          <p className="t-caption m-0 text-surface/80">
+            Data Protection Officer: dpo@example.ng · Registered with the Nigeria Data Protection
+            Commission · Personal data is processed under the Nigeria Data Protection Act 2023.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

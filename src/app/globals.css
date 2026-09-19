@@ -1,0 +1,424 @@
+@import 'tailwindcss';
+
+/*
+ * "The Case File" — UI/UX brief §2–§6.
+ *
+ * Two substrates carry the whole hierarchy: Paper is interface, Manila is the
+ * record. Manila is semantic. It appears if and only if the thing on screen is
+ * a filed artefact. Spending it on decoration breaks the one rule that does
+ * most of the design work in this product.
+ */
+
+@theme {
+  /* §2.1 core tokens (supplied) */
+  --color-ink: #14110f; /* Redaction */
+  --color-authority: #6b2436; /* Oxblood */
+  --color-record: #e3d9c4; /* Manila */
+  --color-surface: #f7f4ee; /* Paper */
+  --color-verified: #0e9b94; /* Signal */
+
+  /* §2.2 derived neutrals */
+  --color-ink-900: #14110f;
+  --color-ink-700: #3a342f;
+  --color-ink-500: #6b635a;
+  --color-ink-300: #a79e90;
+  --color-ink-100: #d8d2c7;
+
+  /* §2.3 status tokens */
+  --color-danger: #c0281f;
+  --color-warning: #8a5b00;
+  --color-verified-text: #0a6f6a;
+  --color-verified-fill: #0e9b94;
+  --color-info: #3a342f;
+
+  /* Hover, §6 */
+  --color-authority-hover: #571c2c;
+
+  /* §4.4 radius. Near-square throughout; the seal is the one exception. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* §3.1 families. Fallbacks are metric-similar so swap reflow stays small. */
+  --font-sans:
+    var(--font-plex-sans), 'IBM Plex Sans', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: var(--font-literata), Literata, Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  /* §9 motion. Nothing in this product exceeds 240ms. */
+  --motion-state: 120ms; /* state change: hover, focus, validation */
+  --motion-sheet: 180ms; /* sheets, accordions */
+  --motion-page: 240ms; /* page and step transitions */
+  --motion-ease: cubic-bezier(0.2, 0, 0.2, 1);
+
+  /* §4.3 containers */
+  --container-marketing: 1200px;
+  --container-app: 1120px;
+  --container-form: 640px;
+  --container-reading: 720px;
+}
+
+/* --------------------------------------------------------------- base */
+
+:root {
+  /* §2.5 the single tenant-overridable token. Set per request on <html>. */
+  --tenant-brand: #6b2436;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  /* 360px is the design baseline. Nothing may scroll horizontally there. */
+  min-width: 320px;
+}
+
+/*
+ * §6 focus. One treatment everywhere: 2px Paper inner ring, 3px Redaction
+ * outer ring. It reads identically on Paper, Manila and Redaction, which is
+ * why it is not colour-dependent. Never removed.
+ */
+:focus-visible {
+  outline: 3px solid var(--color-ink-900);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-surface);
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--color-record);
+  color: var(--color-ink-900);
+}
+
+/* --------------------------------------------------- §3.2 type scale */
+
+.t-display {
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.t-h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.t-h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.t-h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.t-h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.t-body-lg {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+.t-body {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.t-body-sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.t-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.t-caption {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  letter-spacing: 0.005em;
+}
+/* Reading surfaces. Literata, loaded only here (§3.5). */
+.t-read {
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.75;
+}
+.t-read-h {
+  font-family: var(--font-serif);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+/* §3.1 Plex Mono is for genuine data only — things a person transcribes. */
+.t-data {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+.t-data-lg {
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+}
+
+/* §3.3 mobile overrides. Body sizes do not shrink; captions step UP to 13px. */
+@media (max-width: 767px) {
+  .t-display {
+    font-size: 2rem;
+  }
+  .t-h1 {
+    font-size: 1.625rem;
+  }
+  .t-h2 {
+    font-size: 1.3125rem;
+  }
+  .t-h3 {
+    font-size: 1.125rem;
+  }
+  .t-read {
+    font-size: 1.125rem;
+    line-height: 1.7;
+  }
+  .t-data-lg {
+    font-size: 1.1875rem;
+  }
+  .t-caption {
+    font-size: 0.8125rem;
+  }
+}
+
+/* §3.4 measure */
+.measure {
+  max-width: 68ch;
+}
+.measure-read {
+  max-width: 72ch;
+}
+
+/* ------------------------------------------------------------ motion */
+
+/*
+ * §9. Motion answers an action.
+ *
+ * Permitted: sheets, accordions, step transitions, upload progress, the
+ * payment bar, validation messages fading in. Not permitted: entrance
+ * animations on scroll, staggered reveals, hover scale or lift, parallax,
+ * skeleton shimmer, animated counters, decorative loops.
+ *
+ * Partly taste and partly arithmetic — paint is expensive on the low-end
+ * Android this audience actually uses, and §8 budgets three seconds to
+ * interactive on 3G.
+ */
+
+/* State changes: the one transition most interactive elements need. */
+.motion-state {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: var(--motion-state);
+  transition-timing-function: var(--motion-ease);
+}
+
+/* §9: validation messages fade in over 120ms. They never slide or bounce —
+   an error that moves is harder to read than one that simply appears. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.motion-appear {
+  animation: fade-in var(--motion-state) var(--motion-ease) both;
+}
+
+/*
+ * PB-01's hero, per §7: the headline is the type treatment, with "Data
+ * Protection" redacted and resolving to reveal it. §9 calls this the single
+ * non-user-triggered motion moment in the entire system, and it exists once.
+ *
+ * The block wipes away rather than the text fading in, because the point is
+ * that something was withheld and then was not. The text underneath is real
+ * text throughout — the block is decoration over it, so a screen reader
+ * never encounters a redacted headline.
+ *
+ * §7 describes it resolving on scroll; §9 describes it as non-user-triggered.
+ * Those cannot both hold, and §9 is the motion authority and forbids
+ * scroll-triggered entrances everywhere else, so it resolves on load.
+ */
+@keyframes redaction-wipe {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.motion-redaction {
+  position: relative;
+  white-space: nowrap;
+}
+
+.motion-redaction::after {
+  content: '';
+  position: absolute;
+  inset: -0.05em -0.15em;
+  background: var(--color-ink-900);
+  transform-origin: right center;
+  /* 240ms is the page-transition token and the ceiling. The delay lets the
+     reveal register as an event rather than as a flicker during paint. */
+  animation: redaction-wipe var(--motion-page) var(--motion-ease) 240ms both;
+}
+
+/*
+ * The rest of the PB-01 hero, and PB-01 only.
+ *
+ * §9's ban on staggered reveals is about the product: a queue, a record list
+ * or a form that performs an entrance wastes a working person's time on every
+ * visit. The landing page is seen once, by someone deciding whether this
+ * qualification is real, and the brief already concedes it a motion moment.
+ * So the line drawn here is by surface, not by taste — the hero lifts into
+ * place on load, and everything §9 bans for a reason that survives the move
+ * (hover lift, hover scale, parallax, shimmer, scroll-triggered entrances)
+ * stays banned here too, enforced by tests/motion.test.ts.
+ *
+ * The budget is unchanged. Every duration and every delay below is inside the
+ * 240ms ceiling, so the whole sequence is over in less than a third of a
+ * second and never stands between a reader and the words.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.motion-rise {
+  animation: rise var(--motion-page) var(--motion-ease) both;
+}
+
+.motion-rise-1 {
+  animation-delay: 60ms;
+}
+.motion-rise-2 {
+  animation-delay: 120ms;
+}
+.motion-rise-3 {
+  animation-delay: 180ms;
+}
+.motion-rise-4 {
+  animation-delay: 240ms;
+}
+
+/* The rotating claim in the hero. It crossfades and never slides, so the line
+   under it does not appear to be typing itself. */
+.motion-claim {
+  animation: fade-in var(--motion-sheet) var(--motion-ease) both;
+}
+
+/* The payment bar (PY-02) and the upload bar (AP-05). */
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.bar-indeterminate::after {
+  content: '';
+  display: block;
+  width: 25%;
+  height: 100%;
+  background: var(--color-authority);
+  animation: indeterminate 1.4s var(--motion-ease) infinite;
+}
+
+/* ------------------------------------------------------- reduced motion */
+
+/*
+ * §9: all transforms removed, opacity capped at 100ms, and the PB-01 hero
+ * renders in its resolved state.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-appear {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* §9: the hero renders in its resolved state. The block is not frozen
+     mid-wipe, it is simply never drawn. */
+  .motion-redaction::after {
+    content: none;
+  }
+
+  /* The hero arrives already in place. Nothing rises, nothing fades, and the
+     rotating claim stops on the first line — the copy is all still there. */
+  .motion-rise,
+  .motion-claim {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  /*
+   * "Progress indicators that carry meaning are never removed." The blanket
+   * rule above would otherwise freeze the payment bar at a 25%-wide sliver
+   * parked off to one side, which reads as broken rather than as progress.
+   * It becomes a full static bar instead; PY-02 pairs it with an aria-live
+   * status line, because removing feedback is not an accommodation.
+   */
+  .bar-indeterminate::after {
+    animation: none;
+    width: 100%;
+    transform: none;
+  }
+}
+
+/* Screen-reader-only text, for the accessible names §10 requires. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
