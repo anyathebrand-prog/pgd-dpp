@@ -94,8 +94,27 @@ function landingFor(me: Principal) {
  * this site is ever followed — an open redirect on an authentication endpoint
  * is how a phishing page borrows a real domain.
  */
+/**
+ * Only ever a path on this site.
+ *
+ * The check used to be string-shaped — starts with `/`, not `//` — and
+ * `/\evil.com` passed it: the URL parser treats a backslash as a slash in
+ * http(s) URLs, so `new URL('/\evil.com', origin)` is `https://evil.com/`.
+ * That made the handoff an open redirect wearing a university's link.
+ *
+ * So it is resolved exactly as the redirect will resolve it, against a fixed
+ * base, and kept only if the result is still on that base. Whatever trick the
+ * next one uses, it has to survive the same parser the redirect goes through.
+ */
 function safeNext(next: string | null) {
-  if (!next) return null;
-  if (!next.startsWith('/') || next.startsWith('//')) return null;
-  return next;
+  if (!next || !next.startsWith('/')) return null;
+  const base = 'https://handoff.invalid';
+  let resolved: URL;
+  try {
+    resolved = new URL(next, base);
+  } catch {
+    return null;
+  }
+  if (resolved.origin !== base) return null;
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`;
 }

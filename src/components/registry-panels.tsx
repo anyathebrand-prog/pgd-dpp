@@ -46,10 +46,11 @@ export function QueryPanel({ applicationId }: { applicationId: string }) {
       <Field
         label="What is wrong with it"
         name="note"
+        inputId="query-note"
         required
         helper="The candidate sees this word for word, so say what to do — not just what is wrong."
       >
-        <Textarea id="note" name="note" required rows={4} />
+        <Textarea id="query-note" name="note" required rows={4} />
       </Field>
 
       <Button type="submit" size="dense" variant="secondary" disabled={pending} aria-busy={pending}>
@@ -131,6 +132,10 @@ export function DecisionPanel({
       <Field
         label="Note on the record"
         name="note"
+        // Namespaced: the document-query form on the same page also posts a
+        // field called `note`, and two elements with one id leave each label
+        // pointing at whichever came first — a real screen-reader failure.
+        inputId="decision-note"
         required={decision === 'rejected'}
         helper={
           decision === 'rejected'
@@ -138,7 +143,7 @@ export function DecisionPanel({
             : 'Optional. Kept on the application, not shown to the candidate unless you reject.'
         }
       >
-        <Textarea id="note" name="note" rows={3} required={decision === 'rejected'} />
+        <Textarea id="decision-note" name="note" rows={3} required={decision === 'rejected'} />
       </Field>
 
       {confirming ? (

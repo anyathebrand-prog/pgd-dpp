@@ -155,7 +155,10 @@ async function reconcile() {
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(s.inboundEvents)
-    .where(isNull(s.inboundEvents.processedAt));
+    // Signed events only. Forged deliveries are recorded as evidence and
+    // never processed by design, so counting them here would let anyone with
+    // curl inflate a warning meant for lost payments.
+    .where(and(isNull(s.inboundEvents.processedAt), eq(s.inboundEvents.signatureValid, true)));
   if (Number(n) > 0) console.warn(`${n} inbound webhook events have not been processed.`);
 
   console.log(`Reconciliation complete. ${drift} transactions flagged.`);

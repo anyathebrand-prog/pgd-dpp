@@ -60,8 +60,15 @@ export function isFlagKey(value: string): value is FlagKey {
 }
 
 /**
- * Resolution order: the institution's override, then the platform row, then
- * the default written beside the flag above.
+ * Resolution: the platform switch turned **off** wins over everything, then
+ * the institution's override, then the platform row, then the default written
+ * beside the flag above.
+ *
+ * Off-at-the-platform is checked first because it is the kill switch, and a
+ * kill switch that an institution's "on" can outvote is not one. It used to be
+ * checked after the override, so turning a feature off everywhere in an
+ * incident left it running at any university that had been set to "on" —
+ * while SA-03 told the person doing it that it was off for everyone.
  *
  * Cached per request, because a page that checks three flags should not make
  * three round trips, and a flag flipping halfway down a render would produce
@@ -78,12 +85,14 @@ const loadState = cache(async () => {
 export async function flagEnabled(key: FlagKey, institutionId?: string | null) {
   const { globals, overrides } = await loadState();
 
+  const platform = globals.find((g) => g.key === key);
+  if (platform && !platform.enabled) return false;
+
   if (institutionId) {
     const override = overrides.find((o) => o.key === key && o.institutionId === institutionId);
     if (override) return override.enabled;
   }
 
-  const platform = globals.find((g) => g.key === key);
   if (platform) return platform.enabled;
 
   return FLAGS[key].default;

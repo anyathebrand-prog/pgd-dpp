@@ -141,6 +141,11 @@ export default async function OfflineApprovals({
             const mismatch = txn.metadata.amountMismatch as
               | { expected: number; received: number }
               | undefined;
+            // Written by settleTransaction when a signed card payment lands on
+            // a reference already parked here. See the note there.
+            const confirmed = txn.metadata.paystackConfirmation as
+              | { paystackId: string | null; amountKobo: number | null; receivedAt: string }
+              | undefined;
 
             return (
               <li key={txn.id}>
@@ -187,6 +192,25 @@ export default async function OfflineApprovals({
                           {(mismatch.received / 100).toLocaleString('en-NG')}. This is a card
                           payment held for a decision, not a transfer — reconcile it with Paystack
                           before approving, and refund the difference through them if it stands.
+                        </p>
+                      </Banner>
+                    </div>
+                  ) : null}
+
+                  {confirmed && !mismatch ? (
+                    <div className="mb-5">
+                      <Banner tone="warning" title="Paystack has also confirmed a card payment for this">
+                        <p>
+                          {confirmed.amountKobo != null
+                            ? `A card payment of ₦${(confirmed.amountKobo / 100).toLocaleString('en-NG')}`
+                            : 'A card payment'}{' '}
+                          on this same reference was confirmed by Paystack on{' '}
+                          {new Date(confirmed.receivedAt).toLocaleDateString('en-NG')}
+                          {confirmed.paystackId ? ` (transaction ${confirmed.paystackId})` : ''}. That
+                          is stronger evidence than a transfer screenshot. It usually means the card
+                          checkout looked like it failed and the candidate paid again by transfer —
+                          approve this, then check the bank statement for the transfer and refund it
+                          if it arrived.
                         </p>
                       </Banner>
                     </div>

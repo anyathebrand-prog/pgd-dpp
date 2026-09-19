@@ -9,6 +9,7 @@ import { audit } from '@/lib/audit';
 import { rateLimit } from '@/lib/ratelimit';
 import { mayEnterChannel } from './queries';
 import type { FormState } from '../auth/actions';
+import { flagEnabled } from '@/lib/flags';
 
 /**
  * AL-05 and IA-10 — the school channel (ALM-10, ALM-11, ALM-08, ALM-12).
@@ -31,6 +32,13 @@ export async function postToChannel(_prev: FormState, form: FormData): Promise<F
     // The same answer a stranger gets from the page: not "you may not", which
     // would confirm the channel exists and that they are outside it.
     return { error: 'That channel is not yours to post in.' };
+  }
+
+  // SA-03 on the action as well as the page. Reporting and removal are left
+  // ungated on purpose: a closed channel still has posts in it, and moderating
+  // those must not depend on the channel being open.
+  if (!(await flagEnabled('school_channels', institutionId))) {
+    return { error: 'This channel is closed at the moment.' };
   }
 
   if (body.length < 10) return { error: 'Write something for the channel.' };
@@ -73,6 +81,11 @@ export async function postToChannel(_prev: FormState, form: FormData): Promise<F
 export async function broadcast(_prev: FormState, form: FormData): Promise<FormState> {
   const institution = await requireInstitution();
   const me = await requireRole('institution_admin', 'registry');
+
+  // A broadcast is a post into the channel, so it closes with the channel.
+  if (!(await flagEnabled('school_channels', institution.id))) {
+    return { error: 'The alumni channel is switched off here, so there is nowhere to broadcast into.' };
+  }
 
   const title = String(form.get('title') ?? '').trim();
   const body = String(form.get('body') ?? '').trim();

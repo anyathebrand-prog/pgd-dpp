@@ -10,6 +10,7 @@ import { offlineRejectedMail, sendMail } from '@/lib/mail';
 import { putObject, uploadProblem } from '@/lib/storage';
 import { settleTransaction } from './settle';
 import type { FormState } from '../auth/actions';
+import { flagEnabled } from '@/lib/flags';
 
 /**
  * PAY-11 — offline payment, which in Nigeria is not an edge case.
@@ -32,6 +33,18 @@ export async function submitOfflineProof(_prev: FormState, form: FormData): Prom
   const institution = await requireInstitution();
 
   const reference = String(form.get('reference') ?? '').trim();
+
+  /*
+   * SA-03, enforced here and not only on the page — a hidden page with a live
+   * action behind it is a flag that turns nothing off.
+   *
+   * Only new proof is refused. Approving and rejecting keep working with the
+   * flag off, because the console's own advice is "approve the queue first",
+   * and someone who has already sent money must still be able to be approved.
+   */
+  if (!(await flagEnabled('offline_payments', institution.id))) {
+    return { error: 'Bank transfer is not being accepted here at the moment. You can still pay by card.' };
+  }
   const paidOn = String(form.get('paidOn') ?? '').trim();
   const payerName = String(form.get('payerName') ?? '').trim();
   const file = form.get('file');

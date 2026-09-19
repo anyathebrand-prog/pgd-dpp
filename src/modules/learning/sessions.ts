@@ -7,6 +7,7 @@ import { requireUser, requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
 import type { FormState } from '../auth/actions';
+import { flagEnabled } from '@/lib/flags';
 
 /**
  * LRN-07 live sessions and LRN-10 attendance.
@@ -20,6 +21,10 @@ import type { FormState } from '../auth/actions';
 export async function saveSession(_prev: FormState, form: FormData): Promise<FormState> {
   const institution = await requireInstitution();
   const me = await requireRole('facilitator', 'institution_admin');
+
+  if (!(await flagEnabled('live_sessions', institution.id))) {
+    return { error: 'Live sessions are switched off for this institution.' };
+  }
 
   const sessionId = String(form.get('sessionId') ?? '');
   const title = String(form.get('title') ?? '').trim();
@@ -120,6 +125,13 @@ export async function joinSession(_prev: FormState, form: FormData): Promise<For
   const institution = await requireInstitution();
   const me = await requireUser();
   const sessionId = String(form.get('sessionId') ?? '');
+
+  // SA-03. Joining is what records attendance (LRN-10), so a join that still
+  // worked behind a hidden page would write a register for a feature that is
+  // switched off.
+  if (!(await flagEnabled('live_sessions', institution.id))) {
+    return { error: 'Live sessions are not running here at the moment.' };
+  }
 
   const [session] = await withTenant(institution.id, (tx) =>
     tx.select().from(liveSessions).where(eq(liveSessions.id, sessionId)).limit(1),

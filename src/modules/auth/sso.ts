@@ -2,7 +2,7 @@ import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { and, eq, lt } from 'drizzle-orm';
 import { db } from '@/db';
-import { institutions, ssoNonces, users } from '@/db/schema';
+import { institutions, memberships, ssoNonces, users } from '@/db/schema';
 import { audit } from '@/lib/audit';
 
 /**
@@ -159,6 +159,52 @@ export async function verifyHandoff(token: string, institutionSlug: string): Pro
     // §5's edge case, verbatim: never auto-provision. A portal asserting that
     // someone is a student is not the same as this platform having admitted
     // them, and creating an account here would let a portal bug enrol people.
+    return {
+      ok: false,
+      reason: 'unknown_student',
+      detail: 'No account here matches that identifier. It has to be created by admission, not by a link.',
+    };
+  }
+
+  /*
+   * Whose word this is. The token proves the portal of *this* institution
+   * signed it — nothing about anyone else, and nothing about staff.
+   *
+   * The lookup above is by email across the whole platform, because a person
+   * is one account (SSO-04). Without this check that meant one university's
+   * leaked shared secret could sign in any user of any university, including
+   * a curator, whose role needs no second factor. So two conditions, both
+   * required:
+   *
+   *  - they belong to the institution that signed the token, as a candidate,
+   *    student or alumnus — the people a student portal can vouch for;
+   *  - they hold no other role anywhere. Staff and platform accounts sign in
+   *    with their own credentials and their own second factor. A portal
+   *    vouching for a registrar would be one institution's IT system
+   *    authorising access to another's applicants' identity documents.
+   *
+   * Both failures answer exactly as an unknown identifier does, so the
+   * endpoint says nothing about who has an account where.
+   */
+  const held = await db
+    .select({ institutionId: memberships.institutionId, role: memberships.role })
+    .from(memberships)
+    .where(eq(memberships.userId, user.id));
+
+  const VOUCHABLE = ['candidate', 'student', 'alumni'];
+  const belongsHere = held.some(
+    (m) => m.institutionId === inst.id && VOUCHABLE.includes(m.role),
+  );
+  const holdsAnythingElse = held.some((m) => !VOUCHABLE.includes(m.role));
+
+  if (!belongsHere || holdsAnythingElse) {
+    await audit({
+      action: 'sso.handoff_out_of_scope',
+      institutionId: inst.id,
+      subjectId: user.id,
+      actorRole: 'system:sso',
+      detail: { belongsHere, holdsAnythingElse },
+    });
     return {
       ok: false,
       reason: 'unknown_student',

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { ActionForm, CodeField } from '@/components/form';
@@ -15,6 +16,9 @@ export default async function TotpSetupPage() {
   const me = await requireUser();
   const institution = await requireInstitution();
   const secret = await beginTotpEnrolment();
+  // Already enrolled: the secret is never shown again, and the challenge is
+  // the only way through. See beginTotpEnrolment for why.
+  if (!secret) redirect('/login/2fa');
   const uri = otpauthUri(secret, me.email, institution.shortName);
 
   return (

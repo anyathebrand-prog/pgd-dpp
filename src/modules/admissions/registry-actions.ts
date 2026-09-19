@@ -144,6 +144,24 @@ export async function issueDecision(_prev: FormState, form: FormData): Promise<F
   });
   if (!app) return { error: 'That application could not be found at this institution.' };
 
+  /*
+   * Only an application that is actually waiting for a decision can get one.
+   *
+   * There was no check. Admitting a `draft` or `awaiting_application_fee`
+   * application skipped the fee that submission charges. Rejecting an
+   * `enrolled` one turned a paying student back into a rejected applicant —
+   * and started the CMP-10 retention clock below on their documents, which
+   * ends in a purge. A stale tab or a misclick was enough.
+   *
+   * Waitlisted is included: a waitlist exists to be decided later.
+   */
+  const DECIDABLE = ['submitted', 'under_review', 'documents_queried', 'waitlisted'];
+  if (!DECIDABLE.includes(app.status)) {
+    return {
+      error: `This application is ${app.status.replace(/_/g, ' ')}, so it is not waiting for a decision. Reload the page — it may have changed since you opened it.`,
+    };
+  }
+
   if (decision === 'admitted') {
     const seats = await seatsRemaining(app.cohortId);
     if (seats <= 0) {
@@ -170,7 +188,9 @@ export async function issueDecision(_prev: FormState, form: FormData): Promise<F
         offerExpiresAt,
         updatedAt: new Date(),
       })
-      .where(eq(applications.id, applicationId));
+      // Conditional on the status just checked: two registrars deciding the
+      // same application at once cannot both win.
+      .where(and(eq(applications.id, applicationId), eq(applications.status, app.status)));
 
     // CMP-10: the retention clock on a rejected applicant's documents starts
     // at the decision, and this is the moment it is set. Rejected applicants

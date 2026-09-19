@@ -57,11 +57,42 @@ export async function settleTransaction(params: {
     // not a second enrollment.
     if (txn.status === 'success') return { outcome: 'already_settled' as const };
 
-    // An offline transfer waits in `awaiting_approval` until a human approves
-    // it, so that state settles here — but only from IA-09. A webhook arriving
-    // for a reference parked awaiting approval would be settling a payment
-    // nobody has checked against a bank statement.
+    /*
+     * An offline transfer waits in `awaiting_approval` until a human approves
+     * it, so that state settles here — but only from IA-09. A webhook arriving
+     * for a reference parked awaiting approval would be settling a payment
+     * nobody has checked, and tests/payments.test.ts holds that line.
+     *
+     * What it must not do is *discard* the event. It used to return here with
+     * nothing written, the route then marked the event processed, Paystack
+     * stopped retrying, and a real card payment was simply not recorded
+     * anywhere a person would look. The route to that is ordinary: card
+     * checkout appears to fail, the candidate switches to transfer and uploads
+     * proof — which rewrites this same row — and then the bank authorisation
+     * lands late.
+     *
+     * So the confirmation is written onto the row, where IA-09 shows it to the
+     * person deciding. They approve with better evidence than a screenshot,
+     * and know to look for a second payment to refund. Still nothing settles
+     * without them.
+     */
     if (txn.status === 'awaiting_approval' && !params.approvedBy) {
+      if (params.paystackId || params.amountKobo != null) {
+        await tx
+          .update(transactions)
+          .set({
+            metadata: {
+              ...txn.metadata,
+              paystackConfirmation: {
+                paystackId: params.paystackId ?? null,
+                amountKobo: params.amountKobo ?? null,
+                receivedAt: new Date().toISOString(),
+              },
+            },
+            updatedAt: new Date(),
+          })
+          .where(eq(transactions.id, txn.id));
+      }
       return { outcome: 'awaiting_approval' as const };
     }
 

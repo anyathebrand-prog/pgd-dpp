@@ -475,3 +475,81 @@ describe('offline transfers settle through the same path, and only with a person
     expect(enrolled).toHaveLength(1);
   });
 });
+
+/* ------------------------------------------- found by review, September 2026 */
+
+/**
+ * Three ways the webhook used to lose a real payment. Each test drives the
+ * genuine route handler and would have failed against the code before the fix.
+ */
+describe('a real payment is never lost to the dedupe index', () => {
+  it('a forged event cannot claim the key a genuine one will need', async () => {
+    const app = await makeApplication('awaiting_application_fee');
+    const txn = await makeTransaction(app.id, 'application', FEE_KOBO);
+    const eventId = Math.floor(Math.random() * 1e9);
+
+    // Paystack ids are sequential, so an attacker can guess the next few and
+    // post unsigned events for them ahead of time.
+    const forged = await POST(
+      delivery('charge.success', txn.reference, { eventId, signature: 'deadbeef' }),
+    );
+    expect(forged.status).toBe(401);
+
+    // The genuine delivery for that id must still settle — not be answered
+    // "duplicate" because an unsigned payload got there first.
+    const genuine = await POST(delivery('charge.success', txn.reference, { eventId }));
+    expect(genuine.status).toBe(200);
+    expect(await genuine.json()).not.toMatchObject({ duplicate: true });
+
+    const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
+    expect(after.status).toBe('success');
+  });
+
+  it('a retry after a failed attempt is processed, not dismissed as a duplicate', async () => {
+    const app = await makeApplication('awaiting_application_fee');
+    const txn = await makeTransaction(app.id, 'application', FEE_KOBO);
+    const eventId = Math.floor(Math.random() * 1e9);
+
+    // What an earlier attempt leaves behind when settlement throws: the event
+    // row, with no processedAt. The route answers 500 so Paystack retries —
+    // and the retry used to hit this row and be told "duplicate".
+    await adminDb.insert(inboundEvents).values({
+      provider: 'paystack',
+      eventId: String(eventId),
+      eventType: 'charge.success',
+      signatureValid: true,
+      payload: {},
+      processingError: 'simulated: connection reset',
+    });
+
+    const retry = await POST(delivery('charge.success', txn.reference, { eventId }));
+    expect(retry.status).toBe(200);
+
+    const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
+    expect(after.status).toBe('success');
+  });
+
+  it('a card payment on a reference awaiting transfer approval is recorded, not dropped', async () => {
+    const app = await makeApplication('offer_accepted');
+    const txn = await makeTransaction(app.id, 'tuition', TUITION_KOBO);
+    await adminDb
+      .update(transactions)
+      .set({ status: 'awaiting_approval', channel: 'offline_transfer' })
+      .where(eq(transactions.id, txn.id));
+
+    // Card checkout looked like it failed, the candidate paid again by
+    // transfer, and then the bank authorisation landed late.
+    const res = await POST(
+      delivery('charge.success', txn.reference, { amountKobo: TUITION_KOBO }),
+    );
+    expect(res.status).toBe(200);
+
+    const [after] = await adminDb.select().from(transactions).where(eq(transactions.id, txn.id));
+    // Still waiting for a person — the rule the test above holds.
+    expect(after.status).toBe('awaiting_approval');
+    // But no longer silently discarded: the person deciding can see it.
+    expect(after.metadata).toMatchObject({
+      paystackConfirmation: { amountKobo: TUITION_KOBO },
+    });
+  });
+});

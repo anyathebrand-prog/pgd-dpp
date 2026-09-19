@@ -10,6 +10,7 @@ import {
   createSession,
   currentPrincipal,
   destroyCurrentSession,
+  MFA_REQUIRED_ROLES,
   passwordProblem,
   requireUser,
   revokeAllSessions,
@@ -54,27 +55,60 @@ export async function signUp(_prev: FormState, form: FormData): Promise<FormStat
 
   const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-  let userId: string;
+  /*
+   * An address that already has an account gets no session from this form,
+   * verified or not.
+   *
+   * It used to treat an *unverified* existing account as a resumed signup:
+   * same user id, a fresh session, straight to the verify screen. The
+   * password typed here was never checked against the one on file — and an
+   * invited registrar or a newly provisioned institution's first
+   * administrator is unverified by definition until they use their
+   * activation link. So anyone who knew the address could sign up "as" them,
+   * be handed their session, and enrol their own authenticator at AU-07.
+   *
+   * The owner is told by email instead, and the response is the same one a
+   * new address gets, so the form still says nothing about who has an
+   * account (AUTH-04).
+   */
   if (existing) {
-    // No user enumeration: an existing verified account gets the same screen as
-    // a new one, and an email telling the real owner someone tried.
-    if (existing.emailVerifiedAt) {
+    if (existing.passwordHash && !existing.emailVerifiedAt) {
+      // Somebody who started signing up and never verified. The code goes to
+      // the inbox, which only the owner reads; they log in with the password
+      // they chose, and the verify screen picks up from there.
+      await issueOtp(existing.id, email);
+      await sendMail({
+        to: email,
+        subject: 'Finish setting up your account',
+        text: 'You already started an account with this address. Log in with the password you chose, then enter the code we have just sent. If this was not you, you can ignore this email.',
+      });
+    } else {
       await sendMail({
         to: email,
         subject: 'Someone tried to create an account with your email',
-        text: 'You already have an account. If this was you, log in instead — or reset your password.',
+        text: existing.passwordHash
+          ? 'You already have an account. If this was you, log in instead — or reset your password.'
+          : 'An account was set up for you by your institution. Use the activation link in the invitation email to choose your password. If you cannot find it, ask your institution to send a new one.',
       });
-      return { redirectTo: '/signup/verify' };
     }
-    userId = existing.id;
-  } else {
-    const [created] = await db
-      .insert(users)
-      .values({ email, fullName, passwordHash: await hashPassword(password), status: 'pending' })
-      .returning({ id: users.id });
-    userId = created.id;
+    await audit({
+      action: 'auth.signup_existing_address',
+      institutionId: institution.id,
+      subjectId: existing.id,
+      detail: { verified: Boolean(existing.emailVerifiedAt), activated: Boolean(existing.passwordHash) },
+    });
+    return { redirectTo: '/signup/verify' };
   }
 
+  const [created] = await db
+    .insert(users)
+    .values({ email, fullName, passwordHash: await hashPassword(password), status: 'pending' })
+    .returning({ id: users.id });
+  const userId = created.id;
+
+  // Only for an account this request just created. Attaching a candidate role
+  // to somebody else's existing account — an invited registrar's, say — is a
+  // write to a person who never asked for it.
   await db
     .insert(memberships)
     .values({ userId, institutionId: institution.id, role: 'candidate' })
@@ -214,15 +248,26 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
     .set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() })
     .where(eq(users.id, user.id));
 
-  // AUTH-08. Staff roles cannot reach a console without clearing TOTP; the
-  // session is created unsatisfied and the 2FA screen is the only way forward.
+  /*
+   * AUTH-08. Staff roles cannot reach a console without clearing TOTP; the
+   * session is created unsatisfied and the 2FA screen is the only way forward.
+   *
+   * Every membership the person holds, at every institution — not only the
+   * ones at the host they happened to log in on. It used to read this
+   * institution's roles alone, so a super admin or DPO (whose roles are
+   * platform-wide, see PLATFORM_ROLES) logging in at any tenant where they
+   * held nothing got a session stamped `mfaSatisfied: true`, and requireRole
+   * then trusted the stamp. The platform console opened on a password.
+   *
+   * Stricter than strictly necessary for a registrar at one university who
+   * applies to another — they will be asked for a code — and that is the
+   * right way for this to be wrong.
+   */
   const staffRoles = await db
     .select({ role: memberships.role })
     .from(memberships)
-    .where(and(eq(memberships.userId, user.id), eq(memberships.institutionId, institution.id)));
-  const needsMfa = staffRoles.some((r) =>
-    ['registry', 'institution_admin', 'super_admin', 'dpo'].includes(r.role),
-  );
+    .where(eq(memberships.userId, user.id));
+  const needsMfa = staffRoles.some((r) => MFA_REQUIRED_ROLES.includes(r.role));
 
   await createSession(user.id, {
     institutionId: institution.id,
