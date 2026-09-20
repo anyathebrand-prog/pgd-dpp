@@ -40,7 +40,7 @@ test.describe('PB-01', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: 'Post Graduate Diploma in Data Protection and Privacy',
+        name: 'A qualification in Data Protection and Privacy',
       }),
     ).toBeVisible();
   });
@@ -58,9 +58,8 @@ test.describe('PB-01', () => {
     const facts = page.locator('dl').first();
     await expect(facts).toContainText(String(institutions));
     await expect(facts).toContainText(String(items));
-    await expect(page.getByRole('link', { name: /View the programme at/ })).toHaveCount(
-      institutions,
-    );
+    // One way into each live institution, however many there are.
+    await expect(page.getByRole('link', { name: /^Open / })).toHaveCount(institutions);
   });
 
   test('the rotating claim can be stopped, and reads as a list to a screen reader', async ({ page, baseURL }) => {
@@ -87,7 +86,7 @@ test.describe('PB-01', () => {
     await page.goto(`${APEX(baseURL)}/`);
 
     await expect(
-      page.getByRole('heading', { level: 1, name: /Post Graduate Diploma/ }),
+      page.getByRole('heading', { level: 1, name: /A qualification in/ }),
     ).toBeVisible();
     // Not merely present: visible and at full opacity, which is what fails if
     // the entrance animation is left holding it at opacity 0.
@@ -150,13 +149,13 @@ test.describe('PB-01', () => {
   test('says what it holds about you, and links to the detail', async ({ page, baseURL }) => {
     await page.goto(`${APEX(baseURL)}/`);
     await expect(page.getByRole('heading', { name: 'What we hold about you' })).toBeVisible();
-    await page.getByRole('link', { name: /Read the detail, including who is responsible/ }).click();
+    await page.getByRole('link', { name: /Read how the platform itself is run/ }).click();
     await expect(page).toHaveURL(/\/trust$/);
   });
 
   test('the CTA path leads to the institutions', async ({ page, baseURL }) => {
     await page.goto(`${APEX(baseURL)}/`);
-    await page.getByRole('link', { name: 'Browse institutions and intakes' }).first().click();
+    await page.getByRole('link', { name: 'Choose a university and apply' }).first().click();
     await expect(page).toHaveURL(/\/programmes$/);
   });
 
