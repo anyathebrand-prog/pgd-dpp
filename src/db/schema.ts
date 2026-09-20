@@ -1167,6 +1167,42 @@ export const processingActivities = pgTable('processing_activities', {
 
 /** CMP-10. The purge job reports against this, and DP-07 renders it. */
 /**
+ * LB-03 — a reader's own highlights and notes on a library item (LIB-03).
+ *
+ * Anchored to character offsets into `library_items.full_text`, which is what
+ * the OCR worker produced and what the reader renders. That is the only thing
+ * stable enough to anchor to: the item's own text. An offset into a rendered
+ * page would move the first time pagination changed.
+ *
+ * `quote` is stored alongside the offsets deliberately. If the text is ever
+ * re-extracted — a better OCR pass over the same scan — every offset shifts,
+ * and a highlight that cannot be placed can at least still show what it was
+ * taken from rather than silently landing on the wrong sentence.
+ *
+ * Personal: one reader's notes are never another's, and nothing here is shown
+ * to staff. It is shared rather than tenant-scoped because the catalogue is.
+ */
+export const readingNotes = pgTable(
+  'reading_notes',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => libraryItems.id, { onDelete: 'cascade' }),
+    startOffset: integer('start_offset').notNull(),
+    endOffset: integer('end_offset').notNull(),
+    quote: text('quote').notNull(),
+    note: text('note'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('reading_notes_user_item_idx').on(t.userId, t.itemId)],
+);
+
+/**
  * SA-03 feature flags (§5.9).
  *
  * The catalogue of flags lives in code (`src/lib/flags.ts`) and only their
@@ -1303,6 +1339,9 @@ export const SHARED_TABLES = [
   'retention_rules',
   // Provenance only, and no data subject in it at all — see searchEvents.
   'search_events',
+  // One reader's own highlights on a shared catalogue. Scoped by user_id in
+  // every query, not by tenant.
+  'reading_notes',
   /*
    * Platform configuration, not tenant data. `feature_flag_overrides` carries
    * an institution_id and is still shared: a super admin sets every row from

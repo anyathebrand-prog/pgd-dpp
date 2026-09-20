@@ -91,8 +91,20 @@ export default async function LibraryItem({ params }: { params: Promise<{ id: st
         {!withdrawn ? (
           <div className="mt-10 flex flex-wrap items-center gap-4">
             {hosted ? (
-              <LinkButton href={`/api/library/${id}/file`} target="_blank" rel="noopener">
-                {downloadable ? 'Open the document' : 'Read it here'}
+              // LB-02's primary action is LB-03, not the file. The reader is
+              // where highlighting and notes live, and it serves the file
+              // itself for a scan with no text layer behind it.
+              <LinkButton href={`/library/${id}/read`}>Read it here</LinkButton>
+            ) : null}
+
+            {downloadable ? (
+              <LinkButton
+                href={`/api/library/${id}/file`}
+                variant="secondary"
+                target="_blank"
+                rel="noopener"
+              >
+                Download
               </LinkButton>
             ) : null}
 
