@@ -5,6 +5,7 @@ import { libraryItems, licences, takedownRequests } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { Banner, EmptyState, Panel, Record, StaffBand, cx } from '@/components/ui';
 import { ItemEditor } from '@/components/curator-panels';
+import { IngestPanel } from '@/components/ingest-panel';
 
 /**
  * CU-01 curator console (LIB-05, LIB-09).
@@ -15,11 +16,18 @@ import { ItemEditor } from '@/components/curator-panels';
  *
  * It leads with drafts rather than with the published count, because an item
  * sitting unpublished is work someone started and an item published is work
- * that is done. Bulk ingestion (LIB-09) is not built; when it is, it lands
- * here as a queue rather than as a different console.
+ * that is done. Bulk ingestion (LIB-09) lands here as a queue rather than as
+ * a different console, and everything it brings in arrives as a draft — CU-02
+ * still has to be opened for each one, because licence and provenance are
+ * what make an item publishable and no bulk path gets an exception.
  */
-export default async function CuratorConsole() {
+export default async function CuratorConsole({
+  searchParams,
+}: {
+  searchParams: Promise<{ ingested?: string }>;
+}) {
   await requireRole('curator', 'super_admin');
+  const { ingested } = await searchParams;
 
   const items = await db
     .select({ item: libraryItems, licence: licences })
@@ -52,6 +60,14 @@ export default async function CuratorConsole() {
           cannot be published — which is the whole of how this platform stays on the right side of
           §5.7.
         </p>
+
+        {ingested ? (
+          <div className="mt-8">
+            <Banner tone="verified" title="Sheet brought in">
+              <p>{ingested}. Each one is a draft until you open it and record its licence.</p>
+            </Banner>
+          </div>
+        ) : null}
 
         {claims.length > 0 ? (
           <div className="mt-8">
@@ -160,6 +176,10 @@ export default async function CuratorConsole() {
           </div>
 
           <aside>
+            <Panel title="Bring in a sheet">
+              <IngestPanel />
+            </Panel>
+
             <Panel title="Add an item">
               <ItemEditor
                 licenceOptions={licenceOptions.map((l) => ({
