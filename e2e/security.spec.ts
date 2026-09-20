@@ -168,6 +168,7 @@ test.describe('#2 — signing up with someone else’s address gets you nothing'
 test.describe('#3 — the second factor follows the person, not the host', () => {
   test('a super admin at a tenant where they hold no role still owes a code', async ({
     browser,
+    baseURL,
   }) => {
     // SA-01 provisions tenants without a super_admin membership, which is
     // exactly where the login used to decide "no second factor needed".
@@ -178,7 +179,9 @@ test.describe('#3 — the second factor follows the person, not the host', () =>
     await db`UPDATE users SET totp_secret = NULL, totp_confirmed_at = NULL WHERE email = 'platform@example.ng'`;
     await db.end();
 
-    const origin = `http://${FRESH}.localhost:3000`;
+    // The port comes from the config, not from a guess: this suite also runs
+    // against a production build on another port.
+    const origin = `http://${FRESH}.localhost:${new URL(baseURL!).port}`;
     const { context, page } = await passwordOnly(browser, origin, 'platform@example.ng');
 
     await page.goto(`${origin}/platform/tenants`);

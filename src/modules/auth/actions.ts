@@ -204,8 +204,22 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
   const password = String(form.get('password') ?? '');
   const remember = form.get('remember') === 'on';
 
-  // AUTH-06: five attempts per account per 15 minutes, plus IP throttling.
-  if (!rateLimit(`login-ip:${ip}`, 30, 15 * 60_000).allowed) {
+  /*
+   * AUTH-06: five attempts per account per 15 minutes, plus IP throttling.
+   *
+   * The per-IP cap is configurable because an IP is a poor proxy for a person
+   * here. A Nigerian university NATs its whole campus behind one address, so
+   * thirty sign-ins in fifteen minutes is an ordinary morning on results day,
+   * not an attack — and §7.2 puts the real first layer at Cloudflare anyway.
+   * The per-account lockout below is the control that actually defends an
+   * account, and it is not configurable.
+   *
+   * It is also what lets the end-to-end suite run against a production build,
+   * where it is fast enough to spend thirty sign-ins from 127.0.0.1 inside
+   * one window.
+   */
+  const ipAttempts = Number(process.env.LOGIN_IP_ATTEMPTS ?? 30);
+  if (!rateLimit(`login-ip:${ip}`, ipAttempts, 15 * 60_000).allowed) {
     return { redirectTo: '/login/locked' };
   }
 
