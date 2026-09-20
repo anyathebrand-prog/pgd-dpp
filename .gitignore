@@ -11,3 +11,9 @@ next-env.d.ts
 test-results/
 playwright-report/
 .auth/
+
+# `npx skills add` symlinks each skill from .agents/skills into here with an
+# ABSOLUTE path, so the link is only valid on the machine that ran it. The
+# skill itself is tracked under .agents/skills; re-running `npx skills add`
+# (or `npx skills install`) recreates the link locally.
+.claude/skills/design-taste-frontend
