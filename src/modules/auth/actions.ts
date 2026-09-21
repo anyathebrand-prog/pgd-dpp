@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
-import { authTokens, memberships, users } from '@/db/schema';
+import { authTokens, institutions, memberships, users } from '@/db/schema';
 import {
   clientIp,
   createSession,
@@ -19,7 +19,9 @@ import { hashPassword, randomOtp, randomToken, sha256, verifyPassword } from '@/
 import { activationMail, otpMail, resetMail, sendMail } from '@/lib/mail';
 import { lockoutMs, rateLimit, verifyTurnstile } from '@/lib/ratelimit';
 import { audit } from '@/lib/audit';
-import { requireInstitution } from '@/lib/tenant';
+import { requireInstitution, tenantUrl } from '@/lib/tenant';
+import { afterLogin, affiliationsOf } from './affiliations';
+import { issueSwitch } from './switch';
 
 export type FormState = { error?: string; notice?: string; redirectTo?: string } | undefined;
 
@@ -278,7 +280,7 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
    * right way for this to be wrong.
    */
   const staffRoles = await db
-    .select({ role: memberships.role })
+    .select({ role: memberships.role, institutionId: memberships.institutionId })
     .from(memberships)
     .where(eq(memberships.userId, user.id));
   const needsMfa = staffRoles.some((r) => MFA_REQUIRED_ROLES.includes(r.role));
@@ -298,6 +300,22 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
   if (needsMfa && !user.totpConfirmedAt) return { redirectTo: '/security/2fa/setup' };
   if (needsMfa) return { redirectTo: '/login/2fa' };
   if (!user.emailVerifiedAt) return { redirectTo: '/signup/verify' };
+
+  // AU-10. Someone at two universities is asked which one, unless they chose
+  // a default. Staff who needed TOTP have already gone to their challenge and
+  // reach their console from there; the chooser stays in the header for them.
+  const next = afterLogin(affiliationsOf(staffRoles), user.defaultInstitutionId, institution.id);
+  if (next.kind === 'choose') return { redirectTo: '/choose-institution' };
+  if (next.kind === 'switch') {
+    const [target] = await db
+      .select({ slug: institutions.slug })
+      .from(institutions)
+      .where(eq(institutions.id, next.institutionId))
+      .limit(1);
+    const token = await issueSwitch(user.id, next.institutionId, true);
+    return { redirectTo: tenantUrl(target.slug, `/switch?token=${token}`) };
+  }
+
   return {
     // AL-01 is where an alumnus belongs: the student dashboard reads an
     // active enrolment, which a graduate does not have.

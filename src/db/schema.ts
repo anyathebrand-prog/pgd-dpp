@@ -124,6 +124,13 @@ export const users = pgTable(
     failedLoginCount: integer('failed_login_count').notNull().default(0),
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    /**
+     * AU-10 "Set as default". Someone affiliated with two institutions skips
+     * the chooser after signing in and lands here. Null means ask.
+     */
+    defaultInstitutionId: uuid('default_institution_id').references(() => institutions.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -208,11 +215,20 @@ export const authTokens = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    purpose: text('purpose', { enum: ['verify_email', 'reset_password', 'activate'] }).notNull(),
+    purpose: text('purpose', {
+      enum: ['verify_email', 'reset_password', 'activate', 'institution_switch'],
+    }).notNull(),
     tokenHash: text('token_hash').notNull(),
     /** The six-digit OTP path (AU-02) stores the code hash here instead. */
     codeHash: text('code_hash'),
     attempts: integer('attempts').notNull().default(0),
+    /**
+     * AU-10. An `institution_switch` token is good for one institution only,
+     * and carries whether the session that asked for it had cleared its
+     * second factor. Provenance on a shared table, not tenant scoping.
+     */
+    institutionId: uuid('institution_id').references(() => institutions.id, { onDelete: 'cascade' }),
+    mfaSatisfied: boolean('mfa_satisfied').notNull().default(false),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     consumedAt: timestamp('consumed_at', { withTimezone: true }),
     createdAt: createdAt(),

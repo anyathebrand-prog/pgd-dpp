@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { currentInstitution, currentPath } from '@/lib/tenant';
 import { currentPrincipal } from '@/lib/auth';
 import { cx } from './ui';
+import { affiliationsOf } from '@/modules/auth/affiliations';
 
 /**
  * §5.3 navigation.
@@ -71,6 +72,15 @@ export async function TopBar() {
         <div className="ml-auto flex items-center gap-4">
           {me ? (
             <>
+              {/* AU-10: the persistent switcher, only for someone it can help. */}
+              {affiliationsOf(me.allMemberships).length > 1 ? (
+                <Link
+                  href="/choose-institution"
+                  className="t-body-sm text-ink-700 underline underline-offset-2 hover:text-ink-900"
+                >
+                  Switch institution
+                </Link>
+              ) : null}
               <Link href="/account" className="t-body-sm text-ink-700 no-underline hover:text-ink-900">
                 {me.fullName ?? me.email}
               </Link>
