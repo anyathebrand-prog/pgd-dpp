@@ -19,6 +19,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     { href: '/platform/tenants', label: 'Institutions' },
     { href: '/platform/analytics', label: 'Analytics' },
     { href: '/platform/flags', label: 'Feature flags' },
+    { href: '/platform/sso', label: 'University sign-in' },
   ];
 
   return (

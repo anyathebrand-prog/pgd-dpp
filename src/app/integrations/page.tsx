@@ -90,11 +90,30 @@ export default async function Integrations() {
         <section className="mt-12">
           <h2 className="t-h2 m-0 text-ink-900">Tier 1 — SAML or OIDC</h2>
           <p className="t-body measure mt-2 text-ink-700">
-            If your institution runs an identity provider — including Microsoft 365 or Google
-            Workspace for Education — full federated sign-in is on the roadmap rather than in the
-            product. Tell us you have one; it moves up the list when institutions actually have
-            them, not before.
+            If your institution runs an identity provider, including Microsoft 365 or Google
+            Workspace for Education, students can sign in with their university account. We are an
+            OpenID Connect relying party: register us as a confidential web client, authorization
+            code flow with PKCE, and send us the issuer URL, client id and secret. A SAML-only IdP
+            is connected through a SAML-to-OIDC bridge on our side, so nothing changes for you.
           </p>
+          <ul className="t-body-sm measure mt-4 list-disc space-y-2 pl-5 text-ink-900">
+            <li>
+              Redirect URI: <DataString value="https://{your-subdomain}.example.ng/sso/oidc/callback" label="Redirect URI" />
+            </li>
+            <li>
+              Scopes: <code>openid email profile</code>. The ID token must carry <code>email</code>{' '}
+              and <code>email_verified</code>, signed RS256 or ES256.
+            </li>
+            <li>
+              Tell us the email domains you issue. Your provider can vouch only for addresses on
+              them; any other address is refused.
+            </li>
+            <li>
+              A student signing in for the first time gets an account and can apply. They are not
+              enrolled by it: admission still decides that. Staff never sign in this way; they keep
+              their own password and second factor.
+            </li>
+          </ul>
         </section>
 
         <section className="mt-12">

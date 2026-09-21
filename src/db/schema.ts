@@ -70,6 +70,19 @@ export const institutions = pgTable(
      */
     ssoSharedSecret: text('sso_shared_secret'),
     /**
+     * SSO-03, Tier 1: the university's OpenID Connect provider, or BoxyHQ
+     * Jackson standing in front of its SAML IdP (§7). All three set, or
+     * Tier 1 is off for this institution.
+     *
+     * Like the Tier 2 secret, the client secret is stored as a column and
+     * never rendered back: the settings page shows only whether one is set.
+     */
+    oidcIssuer: text('oidc_issuer'),
+    oidcClientId: text('oidc_client_id'),
+    oidcClientSecret: text('oidc_client_secret'),
+    /** The address domains this IdP may vouch for. Subdomains included. */
+    oidcEmailDomains: text('oidc_email_domains').array().notNull().default([]),
+    /**
      * CMP-17's quarterly access re-attestation (IA-05).
      *
      * One timestamp per institution rather than one per membership, because
@@ -234,6 +247,35 @@ export const authTokens = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('auth_tokens_user_purpose_idx').on(t.userId, t.purpose)],
+);
+
+/**
+ * SSO-03. Which platform account an identity provider's subject is.
+ *
+ * Keyed on issuer and subject, not email: the OIDC subject is the stable
+ * identifier, and an address can be reassigned by a university when a
+ * student leaves. The email links a subject to an account once, on first
+ * sign-in; after that the subject decides.
+ *
+ * Shared, like `users`: a person is one account across institutions
+ * (SSO-04). `institution_id` records which institution's IdP made the link.
+ */
+export const ssoIdentities = pgTable(
+  'sso_identities',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    issuer: text('issuer').notNull(),
+    subject: text('subject').notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('sso_identities_issuer_subject_key').on(t.issuer, t.subject)],
 );
 
 /**
@@ -1549,6 +1591,7 @@ export const SHARED_TABLES = [
   'memberships',
   'auth_tokens',
   'sso_nonces',
+  'sso_identities',
   'inbound_events',
   'licences',
   'library_items',

@@ -49,6 +49,50 @@ const STATES: Record<string, { title: string; detail: string; offerLogin?: boole
       'Your university portal says you are a student, but there is no account here with that address. An account is created when you are admitted, never by a link.',
     offerLogin: false,
   },
+  // SSO-03, Tier 1.
+  oidc_not_configured: {
+    title: 'This university has no account sign-in',
+    detail: 'Signing in with a university account is not set up here. Log in with your email and password.',
+  },
+  idp_unreachable: {
+    title: 'Your university sign-in did not answer',
+    detail: 'We could not reach your university’s sign-in service. It may be down for maintenance.',
+  },
+  idp_refused: {
+    title: 'Your university did not sign you in',
+    detail: 'The university sign-in page was cancelled, or it declined the request.',
+  },
+  oidc_state: {
+    title: 'That sign-in had gone stale',
+    detail:
+      'It was started in another tab or more than ten minutes ago, so we could not be sure it was yours. Start it again.',
+  },
+  oidc_exchange: {
+    title: 'Your university sign-in could not be completed',
+    detail: 'The university’s service did not accept our request to finish signing you in. Its IT team will recognise this one.',
+  },
+  oidc_token: {
+    title: 'Your university sign-in could not be verified',
+    detail: 'The answer from the university’s sign-in service did not check out, so it was not trusted.',
+  },
+  unverified_email: {
+    title: 'Your university has not verified your address',
+    detail: 'Your university account did not confirm your email address, so it cannot be used to sign in here.',
+  },
+  foreign_domain: {
+    title: 'That address is not this university’s',
+    detail: 'A university sign-in can only vouch for its own addresses. Log in with your email and password instead.',
+  },
+  staff_account: {
+    title: 'Staff sign in with their password',
+    detail:
+      'Accounts with staff access use their own password and second factor, never a university sign-in. Log in above.',
+  },
+  suspended: {
+    title: 'This account is suspended',
+    detail: 'Contact the registry at your institution.',
+    offerLogin: false,
+  },
   not_configured: {
     title: 'This university has no portal handoff',
     detail: 'Nothing is set up for this institution, so no link from a portal can sign you in here.',

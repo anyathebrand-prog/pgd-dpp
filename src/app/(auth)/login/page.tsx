@@ -3,17 +3,20 @@ import { requireInstitution } from '@/lib/tenant';
 import { ActionForm } from '@/components/form';
 import { Field, Input } from '@/components/ui';
 import { logIn } from '@/modules/auth/actions';
+import { oidcConfig } from '@/modules/auth/oidc';
 
 /**
  * AU-03.
  *
  * SSO-01: Tier 3 — a branded link from the university portal landing here, and
- * the student logging in natively — is what works at launch for every tenant,
- * and it is the only tier built today. SSO-02 (the Tier 2 signed handoff) is
- * Phase 2 and has no endpoint yet; nothing on this page assumes otherwise.
+ * the student logging in natively — is what works at launch for every tenant.
+ * Where the institution has Tier 1 configured (SSO-03), the flow's secondary
+ * action is added: sign in through the university's own account. The
+ * password form stays, always: it is the route that cannot be misconfigured.
  */
 export default async function LoginPage() {
   const institution = await requireInstitution();
+  const tier1 = oidcConfig(institution) !== null;
 
   return (
     <>
@@ -34,6 +37,21 @@ export default async function LoginPage() {
           Stay logged in on this device for 30 days
         </label>
       </ActionForm>
+
+      {tier1 ? (
+        <div className="mt-8 border-t border-ink-300 pt-8">
+          {/* A plain link, not a form: the first leg is a GET redirect. */}
+          <a
+            href="/sso/oidc/start"
+            className="motion-state inline-flex h-12 items-center rounded-sm border border-ink-900 px-5 t-label text-ink-900 no-underline"
+          >
+            Sign in with your {institution.shortName} account
+          </a>
+          <p className="t-body-sm mt-2 mb-0 text-ink-700">
+            The account you use for university email. Students only; staff sign in above.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-8 space-y-2">
         <p className="t-body-sm m-0">
