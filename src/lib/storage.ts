@@ -1,7 +1,8 @@
 import 'server-only';
 import { createHmac } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
+import { signRequest } from './sigv4';
 
 /**
  * Object storage — §7.6, CMP-13.
@@ -10,6 +11,15 @@ import { dirname, join, normalize } from 'node:path';
  * reason it is not S3: students downloading PDFs all month is exactly the
  * pattern that makes an S3 bill ugly). Locally the same interface writes under
  * `.storage/`.
+ *
+ * The driver is chosen by environment, like mail and payments:
+ *
+ *   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+ *     all set: R2. The bucket stays private; nothing here makes it public.
+ *   otherwise, in development: `.storage/` on this disk.
+ *   otherwise, in production: refused, unless STORAGE_DRIVER=local says so.
+ *     A hosted server's disk is wiped on deploy, and an applicant's degree
+ *     certificate silently written there is a certificate lost.
  *
  * The rules that hold in both drivers, because they are the compliance
  * requirement rather than a driver detail:
@@ -36,14 +46,93 @@ function resolve(key: string) {
   return path;
 }
 
+/* ------------------------------------------------------------ the driver */
+
+function r2Config() {
+  const account = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET;
+  if (!account || !accessKeyId || !secretAccessKey || !bucket) return null;
+  return { account, accessKeyId, secretAccessKey, bucket };
+}
+
+function driver(): 'r2' | 'local' {
+  if (r2Config()) return 'r2';
+  if (process.env.NODE_ENV !== 'production' || process.env.STORAGE_DRIVER === 'local') return 'local';
+  throw new Error(
+    'File storage is not configured: set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET. ' +
+      'STORAGE_DRIVER=local keeps files on this disk, which a hosted deploy wipes.',
+  );
+}
+
+async function r2(
+  method: 'GET' | 'PUT' | 'HEAD' | 'DELETE',
+  key: string,
+  opts: { body?: Buffer; headers?: Record<string, string> } = {},
+) {
+  const cfg = r2Config()!;
+  // Each segment encoded, the slashes kept: keys are paths.
+  const path = key.split('/').map(encodeURIComponent).join('/');
+  const url = `https://${cfg.account}.r2.cloudflarestorage.com/${cfg.bucket}/${path}`;
+  const { headers } = signRequest({
+    method,
+    url,
+    headers: opts.headers,
+    body: opts.body,
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+    region: 'auto',
+  });
+  return fetch(url, {
+    method,
+    headers,
+    body: opts.body ? new Uint8Array(opts.body) : undefined,
+    cache: 'no-store',
+    signal: AbortSignal.timeout(60_000),
+  });
+}
+
 export async function putObject(key: string, body: Buffer) {
+  if (driver() === 'r2') {
+    const res = await r2('PUT', key, { body });
+    if (!res.ok) throw new Error(`Storage refused the upload (${res.status})`);
+    return;
+  }
   const path = resolve(key);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, body);
 }
 
 export async function getObject(key: string) {
+  if (driver() === 'r2') {
+    const res = await r2('GET', key);
+    if (!res.ok) throw new Error(`Storage could not return the file (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
+  }
   return readFileSync(resolve(key));
+}
+
+/**
+ * Bytes `start` to `end` inclusive, and only those. A player seeking in a
+ * lecture asks for a slice many times over; fetching the whole recording
+ * for each one is the difference between a seek and a stall on 3G.
+ */
+export async function getObjectRange(key: string, start: number, end: number) {
+  if (driver() === 'r2') {
+    const res = await r2('GET', key, { headers: { Range: `bytes=${start}-${end}` } });
+    if (!res.ok) throw new Error(`Storage could not return the range (${res.status})`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+  const length = end - start + 1;
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(resolve(key), 'r');
+  try {
+    const read = readSync(fd, buffer, 0, length, start);
+    return buffer.subarray(0, read);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 /**
@@ -64,6 +153,12 @@ export function videoKey(institutionId: string, uid: string) {
  * facilitator, not a 500 for a student in the middle of a lesson.
  */
 export async function objectSize(key: string): Promise<number | null> {
+  if (driver() === 'r2') {
+    const res = await r2('HEAD', key);
+    if (!res.ok) return null;
+    const length = Number(res.headers.get('content-length'));
+    return Number.isFinite(length) ? length : null;
+  }
   try {
     return statSync(resolve(key)).size;
   } catch {
@@ -73,6 +168,12 @@ export async function objectSize(key: string): Promise<number | null> {
 
 /** CMP-10. The purge job calls this, and the deletion is verified, not assumed. */
 export async function deleteObject(key: string) {
+  if (driver() === 'r2') {
+    const res = await r2('DELETE', key);
+    // 404 means it is already gone, which is what the purge set out to make
+    // true; anything else is a failure the retention report must show.
+    return res.ok || res.status === 404;
+  }
   try {
     rmSync(resolve(key), { force: true });
     return true;

@@ -277,9 +277,36 @@ diagnose once, so the production config deliberately starts no server of its own
 
 ```bash
 npm run build
-npx next start -p 3100      # and nothing else touching .next
-npm run test:e2e:prod       # the same funnel suite, against the real build
+STORAGE_DRIVER=local npx next start -p 3100   # and nothing else touching .next
+npm run test:e2e:prod                         # the same funnel suite, against the real build
 ```
+
+`STORAGE_DRIVER=local` is needed only here. A production build refuses to store files on its own
+disk unless told to, because a hosted deploy wipes that disk (see below). On PowerShell, set it
+first with `$env:STORAGE_DRIVER = 'local'`.
+
+## File storage: Cloudflare R2
+
+Documents, uploads, receipts and lesson video are stored in `.storage/` locally and in a private
+Cloudflare R2 bucket in production. The switch is the four `R2_*` variables in `.env`:
+
+1. Cloudflare dashboard → **R2** → create a bucket, for example `pgd-dpp-files`. Leave public
+   access off: every read goes through the app's own signed, audited `/api/files` route.
+2. **R2 → Manage R2 API Tokens → Create API token**, with **Object Read & Write**, scoped to that
+   bucket. It gives an Access Key ID and a Secret Access Key; the secret is shown once.
+3. Your account ID is on the R2 overview page.
+
+```
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=pgd-dpp-files
+```
+
+Requests are signed with AWS Signature V4 in `src/lib/sigv4.ts`, written on `node:crypto` and
+checked against Amazon's published example in `tests/sigv4.test.ts`. Lesson video is read in
+ranges, so seeking fetches only the bytes the player asks for. Files already in `.storage/` are not
+copied across; move them with any S3 tool (`rclone`, `aws s3 sync`) before switching over.
 
 ## One rule worth knowing before editing an action
 

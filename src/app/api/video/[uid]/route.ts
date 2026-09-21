@@ -6,7 +6,7 @@ import { videoAccess } from '@/modules/learning/video-access';
 import { currentPrincipal } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
-import { getObject, objectSize, videoKey } from '@/lib/storage';
+import { getObject, getObjectRange, objectSize, videoKey } from '@/lib/storage';
 
 /**
  * LRN-02 — lesson video.
@@ -95,7 +95,7 @@ export async function GET(
       });
     }
 
-    const chunk = (await getObject(key)).subarray(start, end + 1);
+    const chunk = await getObjectRange(key, start, end);
     return new NextResponse(new Uint8Array(chunk), {
       status: 206,
       headers: {
