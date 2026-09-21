@@ -220,12 +220,12 @@ async function PlatformLanding() {
                 A qualification in{' '}
                 <span className="motion-redaction">Data Protection</span> and Privacy
               </h1>
-              <div className="motion-rise motion-rise-2 t-body-lg max-w-[44ch] text-ink-700">
+              <div className="motion-rise motion-rise-2">
                 <RotatingClaim
                   claims={[
-                    `One application. ${word} ${plural}.`,
-                    'Taught as the Act is enforced, not as it is summarised.',
-                    'A certificate an employer can verify in seconds.',
+                    `*One application.* ${word} ${plural}.`,
+                    'Taught as the Act is *enforced*, not as it is summarised.',
+                    'A certificate an employer can *verify in seconds*.',
                   ]}
                 />
               </div>
