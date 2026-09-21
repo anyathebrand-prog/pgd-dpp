@@ -475,13 +475,19 @@ async function PlatformLanding() {
                       <Record
                         title={inst.name}
                         meta={inst.city ?? undefined}
-                        className={cx('flex-1', campus && 'rounded-t-none border-t-0')}
+                        // The closing band's gradient. Every line on it is
+                        // off-white, because the grey secondary ink falls to
+                        // 3.3:1 at the bright end; 4.8:1 is the lowest here.
+                        className={cx(
+                          'glow-band flex-1 [&>div:first-child]:bg-ink-900 [&_p]:text-ink-900',
+                          campus && 'rounded-t-none border-t-0',
+                        )}
                       >
-                        <p className="t-body-sm mt-0 mb-6 text-ink-700">
+                        <p className="t-body-sm mt-0 mb-6">
                           Applications, teaching and the certificate all carry {inst.shortName}
                           &apos;s name.
                         </p>
-                        <LinkButton href={tenantUrl(inst.slug)} variant="secondary" size="dense">
+                        <LinkButton href={tenantUrl(inst.slug)} size="dense">
                           Open {inst.shortName}
                         </LinkButton>
                       </Record>
