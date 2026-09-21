@@ -98,7 +98,7 @@ export default async function CohortCapacity({ params }: { params: Promise<{ id:
           <div
             className={cx(
               'h-2 rounded-sm',
-              state === 'over_committed' ? 'bg-danger' : state === 'healthy' ? 'bg-ink-900' : 'bg-warning',
+              state === 'over_committed' ? 'bg-danger' : state === 'healthy' ? 'bg-accent' : 'bg-warning',
             )}
             style={{ width: `${pct}%` }}
           />

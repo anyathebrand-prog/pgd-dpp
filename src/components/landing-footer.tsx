@@ -39,15 +39,15 @@ const COLUMNS: { heading: string; links: { href: string; label: string; external
 
 export function LandingFooter() {
   return (
-    <footer className="mt-20 border-t border-ink-300 bg-ink-900 text-surface">
+    <footer className="border-t border-ink-300 bg-[#050f2b] text-ink-900">
       <div className="mx-auto max-w-marketing px-4 py-12 md:px-8">
         <div className="grid gap-10 md:grid-cols-[1.3fr_repeat(3,1fr)]">
           <div>
             <p className="t-label m-0 flex items-center gap-2">
-              <span className="inline-block h-5 w-1.5 bg-surface" aria-hidden="true" />
+              <span className="inline-block h-5 w-1.5 bg-accent" aria-hidden="true" />
               PGD-DPP
             </p>
-            <p className="t-body-sm measure mt-3 mb-0 text-surface/80">
+            <p className="t-body-sm measure mt-3 mb-0 text-ink-700">
               A Post Graduate Diploma in Data Protection &amp; Privacy, run by accredited Nigerian
               universities on one platform. Each university admits, teaches and awards; the platform
               handles admissions, payments, the library and verification.
@@ -64,14 +64,14 @@ export function LandingFooter() {
                       <a
                         href={link.href}
                         rel="noopener"
-                        className="t-body-sm text-surface/80 underline underline-offset-2 hover:text-surface"
+                        className="t-body-sm text-ink-700 underline underline-offset-2 hover:text-ink-900"
                       >
                         {link.label}
                       </a>
                     ) : (
                       <Link
                         href={link.href}
-                        className="t-body-sm text-surface/80 underline underline-offset-2 hover:text-surface"
+                        className="t-body-sm text-ink-700 underline underline-offset-2 hover:text-ink-900"
                       >
                         {link.label}
                       </Link>
@@ -83,8 +83,8 @@ export function LandingFooter() {
           ))}
         </div>
 
-        <div className="mt-10 border-t border-surface/20 pt-6">
-          <p className="t-caption m-0 text-surface/80">
+        <div className="mt-10 border-t border-ink-300 pt-6">
+          <p className="t-caption m-0 text-ink-700">
             Data Protection Officer: dpo@example.ng · Registered with the Nigeria Data Protection
             Commission · Personal data is processed under the Nigeria Data Protection Act 2023.
           </p>

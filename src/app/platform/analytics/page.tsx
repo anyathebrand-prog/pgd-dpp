@@ -89,7 +89,7 @@ export default async function Analytics() {
                         and the number is already stated beside it. */}
                     <div className="mt-2 h-2 w-full rounded-sm bg-ink-100">
                       <div
-                        className="h-2 rounded-sm bg-ink-900"
+                        className="h-2 rounded-full bg-accent"
                         style={{ width: `${Math.max(width, 1)}%` }}
                       />
                     </div>

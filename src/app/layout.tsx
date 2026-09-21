@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Mono, IBM_Plex_Sans, Literata } from 'next/font/google';
+import { IBM_Plex_Mono, Inter_Tight, Literata } from 'next/font/google';
 import './globals.css';
 import { currentInstitution } from '@/lib/tenant';
 
@@ -7,17 +7,18 @@ import { currentInstitution } from '@/lib/tenant';
  * §3.5 font loading is a real constraint, not a preference. The budget is
  * ≤110KB on the application funnel against a <3s-on-3G target (§8).
  *
- *  - Plex Sans 400/600 preloads. It is needed for first paint on every screen.
+ *  - Inter Tight 400/600 preloads (brief §0; it stands in for the reference's
+ *    TWK Lausanne). It is needed for first paint on every screen.
  *  - Literata does NOT preload. It is only used on reading surfaces (ST-03,
  *    LB-03, PB-06), so paying for it on the application funnel would be pure
  *    waste for the audience we are optimising hardest for.
  *  - Plex Mono is subset to the characters our data strings actually use —
  *    digits, A–Z, hyphen, slash, colon — which takes it to a few kilobytes.
  */
-const plexSans = IBM_Plex_Sans({
+const interTight = Inter_Tight({
   subsets: ['latin'],
   weight: ['400', '600'],
-  variable: '--font-plex-sans',
+  variable: '--font-inter-tight',
   display: 'swap',
   preload: true,
   fallback: ['ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],
@@ -51,7 +52,7 @@ export const viewport: Viewport = {
   // 360px is the design baseline (§4.2). Zoom is never disabled (§10).
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#F7F4EE',
+  themeColor: '#08163C',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -60,7 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en-NG"
-      className={`${plexSans.variable} ${literata.variable} ${plexMono.variable}`}
+      className={`${interTight.variable} ${literata.variable} ${plexMono.variable}`}
       // §2.5: the one tenant-overridable token. Every semantic token is fixed,
       // so a registry officer moving between institutions never has to relearn
       // what a colour means, and contrast compliance does not depend on a
@@ -70,7 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-ink-900 focus:px-4 focus:py-2 focus:text-surface"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink-900 focus:px-4 focus:py-2 focus:text-surface"
         >
           Skip to content
         </a>

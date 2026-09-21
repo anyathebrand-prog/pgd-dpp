@@ -23,11 +23,12 @@ const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'
 /**
  * PB-01, the one marketing surface.
  *
- * Written to the Case File system in docs/04-ui-ux-brief.md: Paper is the
- * working surface, Manila appears only where the thing on screen is a filed
- * artefact, Signal means verified and nothing else. The dials for this page
- * are DESIGN_VARIANCE 4, MOTION_INTENSITY 3, VISUAL_DENSITY 4, which the
- * skill's own inference table gives for a trust first, regulated audience.
+ * Written to the 2026 "Night Desk" system (brief §0), after flowninja.com:
+ * a navy page, display type with a white-to-blue gradient, soft glows behind
+ * the hero and the closing band, hairline cards with generous corners, and
+ * pill buttons. The section rhythm follows the reference too: hero, figures
+ * and who stands behind them, a three word statement, the offer, questions,
+ * one closing band. Signal still means verified and nothing else.
  *
  * Every figure is counted at request time. A number typed into marketing copy
  * is true exactly once: "five universities" becomes a lie the first time one
@@ -177,19 +178,20 @@ async function PlatformLanding() {
     <>
       <LandingNav />
       <main id="main">
-        {/* 1. Hero. Type led and asymmetric: the headline is the image. */}
-        <section className="border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8 md:py-24">
-            <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:gap-16">
+        {/* 1. Hero. The headline is the image, set in the soft blue glow. */}
+        <section className="glow-hero border-b border-ink-300">
+          <div className="mx-auto max-w-marketing px-4 pt-16 pb-20 md:px-8 md:pt-28 md:pb-28">
+            <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:gap-16">
               <div>
-                <p className="motion-rise t-caption m-0 text-ink-700">
-                  Post Graduate Diploma
+                <p className="motion-rise hairline t-caption m-0 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-ink-700">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-verified-fill" aria-hidden="true" />
+                  Post Graduate Diploma · NDPA 2023 and GAID 2025
                 </p>
-                <h1 className="motion-rise motion-rise-1 t-display measure mt-4 mb-0 text-ink-900">
+                <h1 className="motion-rise motion-rise-1 t-display mt-6 mb-0 max-w-[16ch] text-ink-900">
                   A qualification in{' '}
                   <span className="motion-redaction">Data Protection</span> and Privacy
                 </h1>
-                <div className="motion-rise motion-rise-2">
+                <div className="motion-rise motion-rise-2 t-body-lg max-w-[46ch] text-ink-700">
                   <RotatingClaim
                     claims={[
                       `One application. ${word} ${plural}.`,
@@ -198,33 +200,38 @@ async function PlatformLanding() {
                     ]}
                   />
                 </div>
-                {/* Four text elements and no more: eyebrow, headline, the
-                    rotating claim as the subtext, the action. */}
-                <div className="motion-rise motion-rise-3 mt-10 flex flex-wrap gap-4">
+                <div className="motion-rise motion-rise-3 mt-10 flex flex-wrap items-center gap-4">
                   <LinkButton href="/programmes">See {word.toLowerCase()} {plural}</LinkButton>
+                  <LinkButton href="/verify" variant="secondary">
+                    Verify a certificate
+                  </LinkButton>
                 </div>
               </div>
 
-              {/* The only Manila on this screen, because it is the only filed
-                  artefact on it: what an issued certificate actually says. */}
-              <aside className="lg:pt-10">
-                <div className="rounded-md bg-record p-6">
-                  <div className="mb-4 h-0.5 w-12 bg-authority" aria-hidden="true" />
-                  <p className="t-caption m-0 text-ink-700">Specimen certificate</p>
-                  <p className="t-h4 mt-2 mb-4 text-ink-900">
+              {/* The one filed artefact on this screen: what an issued
+                  certificate actually says. */}
+              <aside aria-label="Specimen certificate">
+                <div className="hairline rounded-lg bg-record/80 p-7 backdrop-blur">
+                  <div className="flex items-center justify-between">
+                    <p className="t-caption m-0 text-ink-700">Specimen certificate</p>
+                    <span className="t-caption rounded-full bg-verified-fill px-3 py-1 font-semibold text-surface">
+                      Verifiable
+                    </span>
+                  </div>
+                  <p className="t-h3 mt-5 mb-6 text-ink-900">
                     Post Graduate Diploma in Data Protection &amp; Privacy
                   </p>
-                  <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-                    <dt className="t-caption m-0 text-ink-700">Holder</dt>
-                    <dd className="t-body-sm m-0 ml-0 text-ink-900">
+                  <div className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 border-t border-ink-300 pt-5">
+                    <span className="t-caption text-ink-700">Holder</span>
+                    <span className="t-body-sm text-ink-900">
                       <Redacted label="Name on the certificate" />
-                    </dd>
-                    <dt className="t-caption m-0 text-ink-700">Awarded by</dt>
-                    <dd className="t-body-sm m-0 ml-0 text-ink-900">Their university</dd>
-                    <dt className="t-caption m-0 text-ink-700">Code</dt>
-                    <dd className="t-data m-0 ml-0 text-ink-900">PGD-7Q2M-4KX9</dd>
-                  </dl>
-                  <p className="t-caption mt-4 mb-0 text-ink-700">
+                    </span>
+                    <span className="t-caption text-ink-700">Awarded by</span>
+                    <span className="t-body-sm text-ink-900">Their university</span>
+                    <span className="t-caption text-ink-700">Code</span>
+                    <span className="t-data text-ink-900">PGD-7Q2M-4KX9</span>
+                  </div>
+                  <p className="t-caption mt-6 mb-0 text-ink-700">
                     Anybody can check that code without an account.
                   </p>
                 </div>
@@ -233,34 +240,42 @@ async function PlatformLanding() {
           </div>
         </section>
 
-        {/* 2. Live figures. A rule separated band, counted at request time. */}
-        <section className="border-b border-ink-300 bg-ink-100/40">
-          <div className="mx-auto max-w-marketing px-4 py-10 md:px-8">
-            <p className="t-body measure mt-0 mb-8 text-ink-700">
-              Taught by Nigerian universities, on one platform, to the law as it is actually
-              enforced: the NDPA 2023 and the GAID 2025.
-            </p>
-            <dl className="m-0 grid gap-8 md:grid-cols-3 md:divide-x md:divide-ink-300">
-              <div className="md:pr-8">
-                <dt className="t-caption m-0 text-ink-700">Universities running it</dt>
-                <dd className="t-h1 m-0 ml-0 text-ink-900">{live.length}</dd>
-              </div>
-              <div className="md:px-8">
-                <dt className="t-caption m-0 text-ink-700">Intakes open now</dt>
-                <dd className="t-h1 m-0 ml-0 text-ink-900">{openIntakes}</dd>
-              </div>
-              <div className="md:pl-8">
-                <dt className="t-caption m-0 text-ink-700">Items in the library</dt>
-                <dd className="t-h1 m-0 ml-0 text-ink-900">{libraryCount}</dd>
-              </div>
+        {/* 2. Live figures, counted at request time. Display sized, as the
+            reference sets its numbers. */}
+        <section className="border-b border-ink-300">
+          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8 md:py-20">
+            <dl className="m-0 grid gap-10 md:grid-cols-3 md:gap-0 md:divide-x md:divide-ink-300">
+              {[
+                { term: 'Universities running it', value: live.length },
+                { term: 'Intakes open now', value: openIntakes },
+                { term: 'Items in the library', value: libraryCount },
+              ].map((fact, i) => (
+                <div
+                  key={fact.term}
+                  className={`flex flex-col-reverse ${i === 0 ? 'md:pr-10' : 'md:px-10'}`}
+                >
+                  <dt className="t-body-sm mt-2 m-0 text-ink-700">{fact.term}</dt>
+                  <dd className="t-display m-0 ml-0 tabular-nums">{fact.value}</dd>
+                </div>
+              ))}
             </dl>
+            {live.length > 0 ? (
+              <div className="mt-14 flex flex-wrap items-center gap-x-10 gap-y-4">
+                <p className="t-caption m-0 text-ink-500">Taught and awarded by</p>
+                {live.map((inst) => (
+                  <span key={inst.id} className="t-h3 text-ink-700">
+                    {inst.shortName}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         </section>
 
         {/* 3. Full bleed figure. Renders only when the photograph exists. */}
         {photo.registry ? (
           <section className="border-b border-ink-300">
-            <figure className="m-0">
+            <figure className="m-0 mx-auto max-w-marketing px-4 py-16 md:px-8">
               <img
                 src={photo.registry}
                 alt="A university registry office"
@@ -268,92 +283,28 @@ async function PlatformLanding() {
                 height={900}
                 loading="lazy"
                 decoding="async"
-                className="h-[38vh] min-h-[240px] w-full object-cover"
+                className="h-[42vh] min-h-[240px] w-full rounded-lg object-cover"
               />
-              <figcaption className="mx-auto max-w-marketing px-4 py-4 md:px-8">
-                <p className="t-caption m-0 text-ink-700">
-                  Admissions still happen in a registry. This platform is the paperwork, not the
-                  university.
-                </p>
+              <figcaption className="t-caption mt-4 text-ink-700">
+                Admissions still happen in a registry. This platform is the paperwork, not the
+                university.
               </figcaption>
             </figure>
           </section>
         ) : null}
 
-        {/* 4. Institutions. Record cards, because each one is a filed thing. */}
-        <section className="border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8">
-            <h2 className="t-h2 measure m-0 text-ink-900">Where you would be studying</h2>
-            <p className="t-body measure mt-3 text-ink-700">
-              You apply to one of these, not to us. Entry requirements, fees and the calendar are
-              each university&apos;s own.
-            </p>
-
-            {live.length === 0 ? (
-              <p className="t-body mt-8 text-ink-700">
-                No institution is taking applications at the moment.
-              </p>
-            ) : (
-              <ul className="mt-8 grid list-none gap-6 p-0 md:grid-cols-2">
-                {live.map((inst) => (
-                  <Record
-                    as="li"
-                    key={inst.id}
-                    title={inst.name}
-                    meta={inst.city ?? undefined}
-                  >
-                    <p className="t-body-sm mt-0 mb-4 text-ink-700">
-                      Applications, teaching and the certificate all carry {inst.shortName}
-                      &apos;s name.
-                    </p>
-                    <Link
-                      href={tenantUrl(inst.slug)}
-                      className="t-body-sm text-ink-900 underline underline-offset-2"
-                    >
-                      Open {inst.shortName}
-                    </Link>
-                  </Record>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-
-        {/* 5. Syllabus. A numbered editorial index, not a card grid. */}
-        <section id="study" className="scroll-mt-28 border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8">
-            <h2 className="t-h2 measure m-0 text-ink-900">What you study</h2>
-            <p className="t-body measure mt-3 text-ink-700">
-              Written out rather than gestured at, because every unaccredited programme in this
-              market also claims a world class curriculum.
-            </p>
-            <ol className="mt-10 grid list-none gap-0 p-0 md:grid-cols-2 md:gap-x-16">
-              {SYLLABUS.map((item, i) => (
-                <li key={item.title} className="border-t border-ink-300 py-6">
-                  <div className="flex gap-5">
-                    <span className="t-data shrink-0 text-ink-500" aria-hidden="true">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <div>
-                      <h3 className="t-h4 m-0 text-ink-900">{item.title}</h3>
-                      <p className="t-body-sm measure mt-2 mb-0 text-ink-700">{item.body}</p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* 6. How it works. A stepper: four columns joined by one rule. */}
-        <section id="how" className="scroll-mt-28 border-b border-ink-300 bg-ink-100/40">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8">
-            <h2 className="t-h2 measure m-0 text-ink-900">How admission works</h2>
-            <ol className="mt-10 grid list-none gap-8 p-0 md:grid-cols-4 md:gap-6">
+        {/* 4. How it works: the reference's three-word statement, then the steps. */}
+        <section id="how" className="scroll-mt-28 border-b border-ink-300">
+          <div className="mx-auto max-w-marketing px-4 py-20 md:px-8 md:py-28">
+            <p className="t-caption m-0 text-ink-500">How admission works</p>
+            <h2 className="t-display mt-4 mb-0">Apply. Study. Qualify.</h2>
+            <ol className="mt-14 grid list-none gap-5 p-0 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
-                <li key={step.title} className="border-t-2 border-authority pt-5">
-                  <p className="t-caption m-0 text-ink-700">Step {i + 1}</p>
-                  <h3 className="t-h4 mt-1 mb-2 text-ink-900">{step.title}</h3>
+                <li key={step.title} className="hairline flex flex-col rounded-lg bg-ink-100/40 p-7">
+                  <span className="t-data text-accent" aria-hidden="true">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="t-h3 mt-8 mb-3 text-ink-900">{step.title}</h3>
                   <p className="t-body-sm m-0 text-ink-700">{step.body}</p>
                 </li>
               ))}
@@ -361,10 +312,65 @@ async function PlatformLanding() {
           </div>
         </section>
 
+        {/* 5. Syllabus. Six numbered cards. */}
+        <section id="study" className="scroll-mt-28 border-b border-ink-300">
+          <div className="mx-auto max-w-marketing px-4 py-20 md:px-8 md:py-28">
+            <div className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end">
+              <h2 className="t-h1 m-0">What you study</h2>
+              <p className="t-body-lg m-0 max-w-[52ch] text-ink-700">
+                Written out rather than gestured at, because every unaccredited programme in this
+                market also claims a world class curriculum.
+              </p>
+            </div>
+            <ol className="mt-14 grid list-none gap-5 p-0 md:grid-cols-2 lg:grid-cols-3">
+              {SYLLABUS.map((item, i) => (
+                <li key={item.title} className="hairline rounded-lg p-7">
+                  <span className="t-data text-ink-500" aria-hidden="true">
+                    Module {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="t-h3 mt-4 mb-3 text-ink-900">{item.title}</h3>
+                  <p className="t-body-sm m-0 text-ink-700">{item.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* 6. Institutions. Record cards, because each one is a filed thing. */}
+        <section className="border-b border-ink-300">
+          <div className="mx-auto max-w-marketing px-4 py-20 md:px-8 md:py-28">
+            <h2 className="t-h1 m-0 max-w-[20ch]">Where you would be studying</h2>
+            <p className="t-body-lg mt-4 max-w-[56ch] text-ink-700">
+              You apply to one of these, not to us. Entry requirements, fees and the calendar are
+              each university&apos;s own.
+            </p>
+
+            {live.length === 0 ? (
+              <p className="t-body mt-10 text-ink-700">
+                No institution is taking applications at the moment.
+              </p>
+            ) : (
+              <ul className="mt-12 grid list-none gap-5 p-0 md:grid-cols-2">
+                {live.map((inst) => (
+                  <Record as="li" key={inst.id} title={inst.name} meta={inst.city ?? undefined}>
+                    <p className="t-body-sm mt-0 mb-6 text-ink-700">
+                      Applications, teaching and the certificate all carry {inst.shortName}
+                      &apos;s name.
+                    </p>
+                    <LinkButton href={tenantUrl(inst.slug)} variant="secondary" size="dense">
+                      Open {inst.shortName}
+                    </LinkButton>
+                  </Record>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
         {/* 7. Image and prose, side by side. */}
         {photo.faculty ? (
           <section className="border-b border-ink-300">
-            <div className="mx-auto grid max-w-marketing items-center gap-10 px-4 py-16 md:grid-cols-2 md:px-8">
+            <div className="mx-auto grid max-w-marketing items-center gap-12 px-4 py-20 md:grid-cols-2 md:px-8">
               <figure className="m-0">
                 <img
                   src={photo.faculty}
@@ -373,58 +379,54 @@ async function PlatformLanding() {
                   height={900}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-[4/3] w-full rounded-sm object-cover"
+                  className="aspect-[4/3] w-full rounded-lg object-cover"
                 />
               </figure>
               <div>
-                <h2 className="t-h2 m-0 text-ink-900">The university owns the academics</h2>
-                <p className="t-body measure mt-4 text-ink-700">
+                <h2 className="t-h1 m-0">The university owns the academics</h2>
+                <p className="t-body-lg mt-5 text-ink-700">
                   We do not set the curriculum and we do not award the credential. Institutions do.
                   What this platform owns is the rails underneath: the application, the money, the
                   teaching surface, the library and the verification.
-                </p>
-                <p className="t-body-sm measure mt-4 text-ink-700">
-                  That split is why a certificate from here carries a university&apos;s name and not
-                  ours.
                 </p>
               </div>
             </div>
           </section>
         ) : null}
 
-        {/* 8. What we hold. A definition grid, the densest block on the page. */}
+        {/* 8. What we hold. Two columns, hairline rows. */}
         <section className="border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8">
-            <h2 className="t-h2 measure m-0 text-ink-900">What we hold about you</h2>
-            <p className="t-body measure mt-3 text-ink-700">
-              This is a programme about data protection, so the platform teaching it should be able
-              to answer the question it teaches you to ask.
-            </p>
-            <dl className="mt-10 grid gap-x-16 gap-y-0 md:grid-cols-2">
+          <div className="mx-auto grid max-w-marketing gap-12 px-4 py-20 md:px-8 md:py-28 lg:grid-cols-[2fr_3fr]">
+            <div>
+              <h2 className="t-h1 m-0">What we hold about you</h2>
+              <p className="t-body-lg mt-5 text-ink-700">
+                This is a programme about data protection, so the platform teaching it should be
+                able to answer the question it teaches you to ask.
+              </p>
+              <p className="t-body-sm mt-8 mb-0">
+                <Link href="/trust" className="text-ink-900 underline underline-offset-4">
+                  Read how the platform itself is run
+                </Link>
+              </p>
+            </div>
+            <dl className="m-0 grid gap-x-10 sm:grid-cols-2">
               {HOLDINGS.map((item) => (
-                <div key={item.term} className="border-t border-ink-300 py-5">
-                  <dt className="t-label m-0 text-ink-900">{item.term}</dt>
-                  <dd className="t-body-sm measure mt-2 mb-0 ml-0 text-ink-700">
-                    {item.detail}
-                  </dd>
+                <div key={item.term} className="border-t border-ink-300 py-6">
+                  <dt className="t-h4 m-0 text-ink-900">{item.term}</dt>
+                  <dd className="t-body-sm mt-2 mb-0 ml-0 text-ink-700">{item.detail}</dd>
                 </div>
               ))}
             </dl>
-            <p className="t-body-sm mt-8 mb-0">
-              <Link href="/trust" className="text-ink-900 underline underline-offset-2">
-                Read how the platform itself is run
-              </Link>
-            </p>
           </div>
         </section>
 
-        {/* 9. Offset pair: photograph against the verification artefact. */}
+        {/* 9. Built for the phone. */}
         {photo.study ? (
-          <section className="border-b border-ink-300 bg-ink-100/40">
-            <div className="mx-auto grid max-w-marketing items-start gap-10 px-4 py-16 md:grid-cols-[3fr_2fr] md:px-8">
+          <section className="border-b border-ink-300">
+            <div className="mx-auto grid max-w-marketing items-center gap-12 px-4 py-20 md:grid-cols-[3fr_2fr] md:px-8">
               <div>
-                <h2 className="t-h2 m-0 text-ink-900">Built for a phone on a bad connection</h2>
-                <p className="t-body measure mt-4 text-ink-700">
+                <h2 className="t-h1 m-0">Built for a phone on a bad connection</h2>
+                <p className="t-body-lg mt-5 text-ink-700">
                   Most of this will be read at night, after work, on a mid range Android on 3G. The
                   pages are light, the library keeps working when the connection does not, and
                   nothing on this platform needs a laptop.
@@ -438,7 +440,7 @@ async function PlatformLanding() {
                   height={800}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-[3/2] w-full rounded-sm object-cover"
+                  className="aspect-[3/2] w-full rounded-lg object-cover"
                 />
               </figure>
             </div>
@@ -447,27 +449,35 @@ async function PlatformLanding() {
 
         {/* 10. Questions. A disclosure stack, open by default on the first. */}
         <section id="faq" className="scroll-mt-28 border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8">
-            <h2 className="t-h2 measure m-0 text-ink-900">Questions people actually ask</h2>
-            <div className="mt-8 max-w-[70ch]">
+          <div className="mx-auto grid max-w-marketing gap-12 px-4 py-20 md:px-8 md:py-28 lg:grid-cols-[2fr_3fr]">
+            <h2 className="t-h1 m-0">Questions people actually ask</h2>
+            <div>
               {QUESTIONS.map((item, i) => (
                 <details
                   key={item.q}
                   open={i === 0}
-                  className="border-t border-ink-300 py-4 last:border-b"
+                  className="group border-t border-ink-300 py-5 last:border-b"
                 >
-                  <summary className="t-h4 cursor-pointer text-ink-900">{item.q}</summary>
-                  <p className="t-body-sm mt-3 mb-0 text-ink-700">{item.a}</p>
+                  <summary className="t-h4 flex cursor-pointer list-none items-center justify-between gap-6 text-ink-900 [&::-webkit-details-marker]:hidden">
+                    {item.q}
+                    <span
+                      aria-hidden="true"
+                      className="hairline flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-700 group-open:bg-ink-900 group-open:text-surface"
+                    >
+                      {'+'}
+                    </span>
+                  </summary>
+                  <p className="t-body mt-3 mb-0 max-w-[60ch] text-ink-700">{item.a}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        {/* 11. Convocation band, if supplied. */}
+        {/* 11. Convocation, if supplied. */}
         {photo.convocation ? (
           <section className="border-b border-ink-300">
-            <figure className="m-0">
+            <figure className="m-0 mx-auto max-w-marketing px-4 py-16 md:px-8">
               <img
                 src={photo.convocation}
                 alt="A convocation ceremony"
@@ -475,23 +485,23 @@ async function PlatformLanding() {
                 height={900}
                 loading="lazy"
                 decoding="async"
-                className="h-[32vh] min-h-[200px] w-full object-cover"
+                className="h-[36vh] min-h-[200px] w-full rounded-lg object-cover"
               />
             </figure>
           </section>
         ) : null}
 
-        {/* 11b. The collection. A four card index, the page's only card row. */}
+        {/* 12. The collection. */}
         <section id="resources" className="scroll-mt-28 border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8">
-            <h2 className="t-h2 m-0 text-ink-900">The law, in one place</h2>
-            <p className="t-body measure mt-3 text-ink-700">
+          <div className="mx-auto max-w-marketing px-4 py-20 md:px-8 md:py-28">
+            <h2 className="t-h1 m-0">The law, in one place</h2>
+            <p className="t-body-lg mt-5 max-w-[62ch] text-ink-700">
               The library holds {libraryCount} items: Nigerian legislation, Commission guidance and
               enforcement decisions, and privacy judgments, each carrying its source and its licence
               so you can tell what you are allowed to do with it. Students keep access after they
               graduate.
             </p>
-            <ul className="mt-8 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 lg:grid-cols-4">
+            <ul className="mt-12 grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-2 lg:grid-cols-4">
               {[
                 {
                   href: 'https://ndpc.gov.ng/',
@@ -515,48 +525,45 @@ async function PlatformLanding() {
                   meta: 'For an employer holding a certificate and a code',
                 },
               ].map((link) => (
-                <li key={link.href}>
-                  <Panel className="h-full">
-                    {link.external ? (
-                      <a
-                        href={link.href}
-                        rel="noopener"
-                        className="t-h4 text-ink-900 underline underline-offset-2"
-                      >
+                <li key={link.href} className="hairline motion-state flex rounded-lg hover:bg-ink-100/40">
+                  {link.external ? (
+                    <a href={link.href} rel="noopener" className="block w-full p-7 no-underline">
+                      <span className="t-h4 text-ink-900">
                         {link.label}
                         <span aria-hidden="true"> ↗</span>
-                      </a>
-                    ) : (
-                      <Link
-                        href={link.href}
-                        className="t-h4 text-ink-900 underline underline-offset-2"
-                      >
+                      </span>
+                      <span className="t-body-sm mt-3 block text-ink-700">{link.meta}</span>
+                    </a>
+                  ) : (
+                    <Link href={link.href} className="block w-full p-7 no-underline">
+                      <span className="t-h4 text-ink-900">
                         {link.label}
-                      </Link>
-                    )}
-                    <p className="t-body-sm mt-2 mb-0 text-ink-700">{link.meta}</p>
-                  </Panel>
+                        <span aria-hidden="true"> →</span>
+                      </span>
+                      <span className="t-body-sm mt-3 block text-ink-700">{link.meta}</span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
         </section>
 
-        {/* 12. Close. Centred, one action, one alternative. */}
-        <section>
-          <div className="mx-auto max-w-marketing px-4 py-20 text-center md:px-8">
-            <h2 className="t-h2 mx-auto measure m-0 text-ink-900">
+        {/* 13. Close. The reference's final band: one statement, one action. */}
+        <section className="px-4 py-20 md:px-8 md:py-28">
+          <div className="glow-band mx-auto max-w-marketing rounded-lg px-6 py-16 text-center md:px-16 md:py-24">
+            <h2 className="t-display mx-auto m-0 max-w-[18ch]">
               One application, to the university you choose.
             </h2>
-            <p className="t-body mx-auto measure mt-3 text-ink-700">
+            <p className="t-body-lg mx-auto mt-6 max-w-[56ch] text-ink-900/85">
               The application fee is set by each institution and charged when you submit. Tuition is
               only ever charged after you have been offered a place and accepted it.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <LinkButton href="/programmes">Choose a university and apply</LinkButton>
               <Link
                 href="/verify"
-                className="t-body-sm self-center text-ink-900 underline underline-offset-2"
+                className="t-body-sm self-center text-ink-900 underline underline-offset-4"
               >
                 Checking somebody&apos;s certificate instead?
               </Link>

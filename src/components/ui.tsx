@@ -1,9 +1,9 @@
 /**
  * The component set — UI/UX brief §5.
  *
- * Only two card types exist, deliberately (§5.4): a Record card on Manila for
- * filed artefacts, and a Panel on Paper for interface grouping. An interface
- * where everything is a rounded card teaches the user nothing.
+ * Only two card types exist, deliberately (§5.4): a Record card, raised, for
+ * filed artefacts, and a Panel, outlined, for interface grouping. The 2026
+ * redesign (§0) changed how they look, not that there are two of them.
  *
  * These are all Server Components. Nothing here ships JavaScript.
  */
@@ -19,21 +19,21 @@ type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'verified
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-authority text-surface hover:bg-authority-hover',
-  secondary: 'bg-transparent text-ink-900 border border-ink-500 hover:bg-ink-900/6',
+  secondary: 'bg-transparent text-ink-900 border border-ink-500 hover:border-ink-900 hover:bg-ink-900/6',
   tertiary: 'bg-transparent text-ink-700 underline underline-offset-2 hover:text-ink-900',
   danger: 'bg-danger text-surface hover:brightness-90',
   // §2.4 rule 2: a Signal-filled button takes Redaction text. Paper on Signal
   // is 3.12:1 and fails; Redaction on Signal is 5.49:1 and passes.
   verified: 'bg-verified-fill text-ink-900 hover:brightness-95',
-  'on-dark': 'bg-surface text-ink-900 hover:bg-ink-100',
+  'on-dark': 'bg-ink-900 text-surface hover:bg-authority-hover',
 };
 
 const BUTTON_SIZES = {
   // 48px is the default and the only size on mobile.
-  default: 'h-12 px-5 text-base',
+  default: 'h-12 px-6 text-base',
   dense: 'h-10 px-5 text-sm',
   // Desktop-only inline row actions. Padding keeps the touch target at 44px.
-  inline: 'h-8 px-3 text-sm',
+  inline: 'h-8 px-4 text-sm',
 } as const;
 
 export function Button({
@@ -49,7 +49,8 @@ export function Button({
   return (
     <button
       className={cx(
-        'inline-flex items-center justify-center rounded-sm font-semibold',
+        // §0: pill buttons, as in the reference.
+        'inline-flex items-center justify-center rounded-full font-semibold',
         // §9: 120ms on the spec easing. No transform — hover lift and scale
         // are both on the not-permitted list.
         'motion-state disabled:cursor-not-allowed disabled:bg-ink-100 disabled:text-ink-500',
@@ -77,7 +78,7 @@ export function LinkButton({
   return (
     <a
       className={cx(
-        'inline-flex items-center justify-center rounded-sm font-semibold no-underline',
+        'inline-flex items-center justify-center rounded-full font-semibold no-underline',
         'motion-state',
         BUTTON_VARIANTS[variant],
         BUTTON_SIZES[size],
@@ -148,7 +149,7 @@ export function Field({
 }
 
 const INPUT_BASE =
-  'motion-state block w-full h-12 rounded-sm border border-ink-500 bg-surface px-3 text-base text-ink-900 placeholder:text-ink-500';
+  'motion-state block w-full h-12 rounded-sm border border-ink-500 bg-ink-100/40 px-4 text-base text-ink-900 placeholder:text-ink-500 hover:border-ink-700';
 
 export function Input({
   invalid,
@@ -190,7 +191,7 @@ export function Textarea({
   return (
     <textarea
       className={cx(
-        'block w-full rounded-sm border border-ink-500 bg-surface p-3 text-base text-ink-900',
+        'block w-full rounded-sm border border-ink-500 bg-ink-100/40 p-4 text-base text-ink-900',
         className,
       )}
       rows={4}
@@ -220,10 +221,10 @@ export function Record({
   as?: 'article' | 'div' | 'li';
 }) {
   return (
-    <Tag className={cx('rounded-md bg-record p-5', className)}>
-      <div className="mb-3 h-0.5 w-12 bg-authority" aria-hidden="true" />
+    <Tag className={cx('hairline rounded-md bg-record p-6', className)}>
+      <div className="mb-3 h-0.5 w-12 rounded-full bg-accent" aria-hidden="true" />
       {title ? <h3 className="t-h3 m-0 text-ink-900">{title}</h3> : null}
-      {/* §2.4: secondary text on Manila is ink-700. ink-500 is 4.21:1 and fails. */}
+      {/* Secondary text on a record is ink-700 (9.6:1). */}
       {meta ? <p className="t-body-sm mt-1 mb-0 text-ink-700">{meta}</p> : null}
       {children ? <div className="mt-4 text-ink-900">{children}</div> : null}
     </Tag>
@@ -243,7 +244,7 @@ export function Panel({
   actions?: ReactNode;
 }) {
   return (
-    <section className={cx('rounded-md border border-ink-300 bg-surface p-5', className)}>
+    <section className={cx('rounded-md border border-ink-300 bg-surface p-6', className)}>
       {title || actions ? (
         <div className="mb-4 flex items-start justify-between gap-4">
           {title ? <h2 className="t-h3 m-0 text-ink-900">{title}</h2> : <span />}
@@ -282,7 +283,7 @@ export function Banner({
   return (
     <div
       role={tone === 'danger' ? 'alert' : 'status'}
-      className={cx('motion-appear rounded-sm border-l-[3px] p-4 text-ink-900', t.rule, t.tint)}
+      className={cx('motion-appear rounded-md border-l-[3px] p-4 text-ink-900', t.rule, t.tint)}
     >
       <p className="t-label m-0 mb-1">
         <span aria-hidden="true">{t.glyph} </span>
@@ -304,7 +305,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-ink-300 p-8 text-center">
+    <div className="rounded-md border border-dashed border-ink-300 p-10 text-center">
       <h3 className="t-h3 m-0 text-ink-900">{heading}</h3>
       {children ? <p className="t-body-sm mx-auto mt-2 max-w-prose text-ink-700">{children}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
@@ -427,10 +428,10 @@ export function StatusStepper({
  */
 export function StaffBand({ institution, role }: { institution: string; role: string }) {
   return (
-    <div className="bg-ink-900 text-surface">
+    <div className="glow-band text-ink-900">
       <div className="mx-auto flex h-14 max-w-[1600px] flex-wrap items-center justify-between gap-2 px-8">
         <span className="t-label">{institution}</span>
-        <span className="t-caption text-surface/85">
+        <span className="t-caption text-ink-900/85">
           {role} · All access to applicant records is logged.
         </span>
       </div>

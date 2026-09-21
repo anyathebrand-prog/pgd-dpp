@@ -164,7 +164,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
         {row.lesson.videoUid && video.provider === 'cloudflare' ? (
           <div className="mt-8">
             {video.iframe ? (
-              <div className="relative aspect-video w-full bg-ink-900">
+              <div className="relative aspect-video w-full overflow-hidden rounded-md bg-black">
                 <iframe
                   src={video.iframe}
                   title={`Video for ${row.lesson.title}`}
@@ -193,7 +193,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
             <video
               controls
               preload="none"
-              className="w-full bg-ink-900"
+              className="w-full rounded-md bg-black"
               aria-label={`Video for ${row.lesson.title}`}
             >
               <source src={`/api/video/${row.lesson.videoUid}`} />

@@ -76,27 +76,27 @@ export function LandingNav() {
     <div ref={navRef} className="sticky top-0 z-30">
       {/* The utility strip. Redaction, because it is chrome rather than
           content, and because it makes the Paper below it read as the page. */}
-      <div className="bg-ink-900 text-surface">
+      <div className="border-b border-ink-300 bg-ink-100/60 text-ink-700">
         <div className="mx-auto flex max-w-marketing flex-wrap items-center gap-x-6 gap-y-1 px-4 py-1.5 md:px-8">
           <p className="t-caption m-0">
             Registered with the Nigeria Data Protection Commission
           </p>
           <a
             href="mailto:dpo@example.ng"
-            className="t-caption text-surface underline underline-offset-2"
+            className="t-caption text-ink-900 underline underline-offset-2"
           >
             dpo@example.ng
           </a>
           <Link
             href="/login"
-            className="t-caption ml-auto hidden text-surface underline underline-offset-2 md:inline"
+            className="t-caption ml-auto hidden text-ink-900 underline underline-offset-2 md:inline"
           >
             Log in
           </Link>
         </div>
       </div>
 
-      <header className="border-b border-ink-300 bg-surface">
+      <header className="border-b border-ink-300 bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex min-h-16 max-w-marketing items-center gap-6 px-4 py-2 md:px-8">
           <Link href="/" className="flex items-center gap-2 no-underline">
             <span className="inline-block h-6 w-1.5 bg-authority" aria-hidden="true" />
@@ -121,7 +121,7 @@ export function LandingNav() {
                     </span>
                   </button>
                   {openMenu === section.label ? (
-                    <ul className="motion-appear absolute right-0 top-full m-0 w-72 list-none border border-ink-300 bg-surface p-2">
+                    <ul className="motion-appear absolute right-0 top-full mt-2 m-0 w-72 list-none rounded-md border border-ink-300 bg-record p-2">
                       {section.items.map((item) => (
                         <li key={item.href}>
                           <MenuLink item={item} onNavigate={() => setOpenMenu(null)} />
@@ -142,7 +142,7 @@ export function LandingNav() {
             )}
             <Link
               href="/programmes"
-              className="motion-state t-body-sm ml-2 inline-flex min-h-11 items-center rounded-sm bg-authority px-4 font-semibold text-surface no-underline hover:bg-authority-hover"
+              className="motion-state t-body-sm ml-2 inline-flex min-h-11 items-center rounded-full bg-authority px-4 font-semibold text-surface no-underline hover:bg-authority-hover"
             >
               Start an application
             </Link>
@@ -197,7 +197,7 @@ export function LandingNav() {
               <Link
                 href="/programmes"
                 onClick={() => setMobileOpen(false)}
-                className="motion-state t-body-sm mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-sm bg-authority px-4 font-semibold text-surface no-underline"
+                className="motion-state t-body-sm mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-authority px-4 font-semibold text-surface no-underline"
               >
                 Start an application
               </Link>

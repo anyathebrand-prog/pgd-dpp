@@ -1,46 +1,57 @@
 @import 'tailwindcss';
 
 /*
- * "The Case File" — UI/UX brief §2–§6.
+ * "Night Desk" — the 2026 redesign (brief §0, which supersedes §2 and §4.4).
  *
- * Two substrates carry the whole hierarchy: Paper is interface, Manila is the
- * record. Manila is semantic. It appears if and only if the thing on screen is
- * a filed artefact. Spending it on decoration breaks the one rule that does
- * most of the design work in this product.
+ * Deep navy is the interface, off-white is the ink, and headings carry a
+ * white-to-blue gradient. The token NAMES are the Case File's and are kept on
+ * purpose: `surface` is still the page, `ink-900` is still primary text,
+ * `record` is still the filed artefact. Only the values moved, so no screen
+ * had to be rewritten to change what it looks like, and what each token
+ * means is unchanged.
+ *
+ * `record` stays semantic: a raised navy panel, used only for filed
+ * artefacts. It is no longer Manila, but it is still never decoration.
  */
 
 @theme {
-  /* §2.1 core tokens (supplied) */
-  --color-ink: #14110f; /* Redaction */
-  --color-authority: #6b2436; /* Oxblood */
-  --color-record: #e3d9c4; /* Manila */
-  --color-surface: #f7f4ee; /* Paper */
-  --color-verified: #0e9b94; /* Signal */
+  /* §0 core tokens */
+  --color-ink: #f8f8f8; /* primary ink on the night surface */
+  --color-authority: #f8f8f8; /* primary actions: white pill, navy text */
+  --color-record: #11245a; /* the filed artefact, raised one step */
+  --color-surface: #08163c; /* the page */
+  --color-verified: #2dd4bf; /* Signal, brightened for a dark ground */
 
-  /* §2.2 derived neutrals */
-  --color-ink-900: #14110f;
-  --color-ink-700: #3a342f;
-  --color-ink-500: #6b635a;
-  --color-ink-300: #a79e90;
-  --color-ink-100: #d8d2c7;
+  /* Neutrals. Against the surface: 900 16.6:1, 700 11.5:1, 500 6.9:1; the
+     lowest pairing anywhere, 500 on ink-100, is 5.3:1. */
+  --color-ink-900: #f8f8f8;
+  --color-ink-700: #ced0d8;
+  --color-ink-500: #9ca2b1;
+  --color-ink-300: #394563; /* rules and borders */
+  --color-ink-100: #1a2b5c; /* subtle fills */
 
-  /* §2.3 status tokens */
-  --color-danger: #c0281f;
-  --color-warning: #8a5b00;
-  --color-verified-text: #0a6f6a;
-  --color-verified-fill: #0e9b94;
-  --color-info: #3a342f;
+  /* Status, tuned for a dark ground: every one clears 4.5:1 as text. */
+  --color-danger: #ff8a80;
+  --color-warning: #f5c16c;
+  --color-verified-text: #5eead4;
+  --color-verified-fill: #2dd4bf;
+  --color-info: #ced0d8;
 
-  /* Hover, §6 */
-  --color-authority-hover: #571c2c;
+  --color-authority-hover: #b6d2f9;
 
-  /* §4.4 radius. Near-square throughout; the seal is the one exception. */
-  --radius-sm: 2px;
-  --radius-md: 4px;
+  /* Accent blues, for gradients and emphasis. */
+  --color-accent: #6da5f2;
+  --color-accent-deep: #1f6adc;
+  --color-accent-soft: #f1c4fa;
 
-  /* §3.1 families. Fallbacks are metric-similar so swap reflow stays small. */
+  /* §0 radius: soft corners, pill buttons; the seal stays circular. */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* §0 families. Inter Tight stands in for the reference's TWK Lausanne. */
   --font-sans:
-    var(--font-plex-sans), 'IBM Plex Sans', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+    var(--font-inter-tight), 'Inter Tight', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-serif: var(--font-literata), Literata, Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
 
@@ -62,7 +73,7 @@
 :root {
   /* §2.5 the single tenant-overridable token. Set per request on <html>. */
   --tenant-brand: #6b2436;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
@@ -80,6 +91,7 @@ body {
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
   /* 360px is the design baseline. Nothing may scroll horizontally there. */
   min-width: 320px;
 }
@@ -97,23 +109,39 @@ body {
 }
 
 ::selection {
-  background: var(--color-record);
+  background: var(--color-accent-deep);
   color: var(--color-ink-900);
 }
 
 /* --------------------------------------------------- §3.2 type scale */
 
 .t-display {
-  font-size: 2.75rem;
+  font-size: clamp(2.5rem, 1.6rem + 4vw, 5rem);
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
 }
 .t-h1 {
-  font-size: 2rem;
+  font-size: clamp(2rem, 1.6rem + 1.6vw, 2.75rem);
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.015em;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+/*
+ * §0 gradient headings: off-white into the accent blue. Text-fill, so a
+ * `text-ink-900` class on the same element cannot flatten it, and the
+ * padding keeps descenders inside the clipped box. Both ends clear 6:1 on
+ * the surface, so the gradient never costs legibility.
+ */
+.t-display,
+.t-h1,
+.t-gradient {
+  background-image: linear-gradient(100deg, #f8f8f8 35%, #6da5f2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: 0.08em;
 }
 .t-h2 {
   font-size: 1.5rem;
@@ -183,12 +211,6 @@ body {
 
 /* §3.3 mobile overrides. Body sizes do not shrink; captions step UP to 13px. */
 @media (max-width: 767px) {
-  .t-display {
-    font-size: 2rem;
-  }
-  .t-h1 {
-    font-size: 1.625rem;
-  }
   .t-h2 {
     font-size: 1.3125rem;
   }
@@ -358,6 +380,22 @@ body {
   height: 100%;
   background: var(--color-authority);
   animation: indeterminate 1.4s var(--motion-ease) infinite;
+}
+
+/*
+ * §0 atmosphere: the soft blue glow the reference sits its heroes in. A
+ * background, not a shadow on a component, and it never moves.
+ */
+.glow-hero {
+  background-image:
+    radial-gradient(60% 55% at 80% 0%, rgba(31, 106, 220, 0.45), transparent 70%),
+    radial-gradient(45% 45% at 5% 30%, rgba(241, 196, 250, 0.14), transparent 70%);
+}
+.glow-band {
+  background-image: linear-gradient(135deg, #0d1f52 0%, #184098 55%, #1f6adc 100%);
+}
+.hairline {
+  border: 1px solid rgba(248, 248, 248, 0.12);
 }
 
 /* ------------------------------------------------------- reduced motion */

@@ -10,6 +10,45 @@
 | **Palette source** | Supplied brand palette — Redaction, Oxblood, Manila, Paper, Signal |
 | **Type** | Literata · IBM Plex Sans · IBM Plex Mono |
 
+> **§0 supersedes §2's values and §4.4's radius as of 21 September 2026.** Read §0 first.
+
+---
+
+## 0. The 2026 redesign: "Night Desk"
+
+Commissioned as a whole-platform redesign after flowninja.com. It changes how the product **looks**; it does not change what any token **means**, what the two card types are for, or any rule in §9 (motion) and §10 (accessibility).
+
+### 0.1 What changed
+
+| Rule | Case File (v1.0) | Night Desk (§0) |
+|---|---|---|
+| Page (`surface`) | Paper `#F7F4EE` | Navy `#08163C` |
+| Primary ink (`ink-900`) | Redaction `#14110F` | Off-white `#F8F8F8` |
+| Secondary / muted ink | `#3A342F` / `#6B635A` | `#CED0D8` / `#9CA2B1` |
+| Rules (`ink-300`) · fills (`ink-100`) | `#A79E90` · `#D8D2C7` | `#394563` · `#1A2B5C` |
+| Filed artefact (`record`) | Manila `#E3D9C4` | Raised navy `#11245A`, 1px hairline |
+| Primary action (`authority`) | Oxblood fill, Paper text | White pill `#F8F8F8`, navy text |
+| Signal (`verified`) | `#0E9B94` | `#2DD4BF`, text `#5EEAD4` |
+| Danger · warning | `#C0281F` · `#8A5B00` | `#FF8A80` · `#F5C16C` |
+| Accent (new) | none | `#6DA5F2`, `#1F6ADC`, soft `#F1C4FA` |
+| Radius | 2px / 4px | 6px (inputs) · 12px (cards) · 20px (feature blocks) · pill buttons |
+| Gradients | banned | **permitted**: display and H1 headings (off-white → `#6DA5F2`), the hero glow, the closing band, the staff band |
+| Shadows | banned | still banned; depth comes from a raised fill and a hairline |
+| Type | IBM Plex Sans | Inter Tight 400/600 (standing in for TWK Lausanne); Literata and Plex Mono unchanged |
+
+### 0.2 What did not change
+
+- **Token names and meanings.** `surface` is the page, `ink-900` is primary text, `record` is only ever a filed artefact, Signal means verified and nothing else. Screens were not rewritten; the values under them moved.
+- **Two card types.** Record (raised) and Panel (outlined).
+- **§9 motion.** The reference animates headings on scroll; this product does not. Scroll-triggered entrances, hover lift and scale, parallax, shimmer and spinners stay banned everywhere, including PB-01. `tests/motion.test.ts` still enforces it.
+- **§10.** Every text pairing clears 4.5:1 on every ground: on the page, ink-900 16.6:1, ink-700 11.5:1, ink-500 6.9:1; the lowest anywhere is ink-500 on `ink-100`, 5.3:1. Navy on the white pill is 16.6:1; navy on Signal 9.5:1. Form-control borders use ink-500 (6.9:1, over the 3:1 non-text threshold); ink-300 is for decorative rules only.
+
+### 0.3 Open item
+
+The tenant brand colour (§2.5) is still validated against Paper, so a dark university colour such as Oxblood is barely visible as the mark beside the institution name on navy. Either validate it against the navy surface or render the mark on a light chip.
+
+---
+
 Every contrast ratio in this document has been calculated, not estimated. Where a supplied colour cannot be used as it appears in the reference, it is flagged in §12 rather than quietly adjusted.
 
 ---

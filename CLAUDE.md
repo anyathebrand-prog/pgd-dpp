@@ -22,9 +22,11 @@ Those are general-purpose UI/UX references and they are **subordinate to
 [`docs/04-ui-ux-brief.md`](docs/04-ui-ux-brief.md)**. Where they disagree, the brief wins — it is a
 commissioned design system for this product, not a default.
 
-Concretely, the brief overrides common defaults: there are **no shadows**, no gradients, border
-radius is 2–4px with exactly one circular element (the verification seal), and there are only two
-card types. Reach for the skills for things the brief does not cover — motion choreography, chart
+Concretely: the brief's §0 ("Night Desk", the 2026 redesign after flowninja.com) sets a navy
+surface, off-white ink, gradient display headings, 6–20px corners and pill buttons. There are still
+**no shadows**, still only two card types, and §9's motion rules are unchanged. §0 changed token
+*values*, not token *meanings*: keep using `surface`, `ink-*`, `record`, `authority` by what they
+mean, never by what colour they currently are. Reach for the skills for things the brief does not cover — motion choreography, chart
 types, icon selection — not to restyle what it already settled.
 
 ### The landing page is the one marketing surface
@@ -65,7 +67,7 @@ reason to `npm run db:reset` afterwards.
 shared tables record it as provenance — which tenant a session was opened against, which
 institution an alumnus graduated from. Policing it on `sessions` means no session ever resolves.
 
-**Manila (`--record`) means "this is a filed artefact".** An application, a document, a module, a
+**`--record` (Manila before §0, raised navy now) means "this is a filed artefact".** An application, a document, a module, a
 certificate. It is semantic, not decorative — a filter panel is never Manila. **Signal
 (`--verified`) means verified and nothing else**, is never text on Paper or Manila, and a
 Signal-filled button takes Redaction text.
