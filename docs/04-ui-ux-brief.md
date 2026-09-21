@@ -43,6 +43,18 @@ Commissioned as a whole-platform redesign after flowninja.com. It changes how th
 - **§9 motion.** The reference animates headings on scroll; this product does not. Scroll-triggered entrances, hover lift and scale, parallax, shimmer and spinners stay banned everywhere, including PB-01. `tests/motion.test.ts` still enforces it.
 - **§10.** Every text pairing clears 4.5:1 on every ground: on the page, ink-900 16.6:1, ink-700 11.5:1, ink-500 6.9:1; the lowest anywhere is ink-500 on `ink-100`, 5.3:1. Navy on the white pill is 16.6:1; navy on Signal 9.5:1. Form-control borders use ink-500 (6.9:1, over the 3:1 non-text threshold); ink-300 is for decorative rules only.
 
+### 0.4 The one recorded motion exception
+
+"Apply. Study. Qualify." on PB-01 types, holds, erases and types again, continuously (`src/components/typing-heading.tsx`). It is the only decorative loop in the product, added at the product owner's request on 21 September 2026, and it holds only because of its safeguards, each checked by `tests/motion.test.ts`:
+
+- a visible pause button (WCAG 2.2.2: moving content over five seconds must be stoppable);
+- under `prefers-reduced-motion`, it never starts and the full heading stands;
+- screen readers get the heading once, as text; the typed copy is `aria-hidden`;
+- the full text is laid out invisibly in the same cell, so nothing around it moves;
+- the caret is solid, not blinking, so there is no second loop, and no CSS duration exceeds 240ms.
+
+Everything else in §9 stands, on PB-01 as everywhere: no scroll-triggered entrances, no hover lift or scale, no parallax, shimmer or spinners.
+
 ### 0.3 Open item
 
 The tenant brand colour (§2.5) is still validated against Paper, so a dark university colour such as Oxblood is barely visible as the mark beside the institution name on navy. Either validate it against the navy surface or render the mark on a light chip.

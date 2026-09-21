@@ -9,6 +9,7 @@ import { LinkButton, Naira, Panel, Record, Redacted, cx } from '@/components/ui'
 import { LandingNav } from '@/components/landing-nav';
 import { LandingFooter } from '@/components/landing-footer';
 import { RotatingClaim } from '@/components/landing-hero';
+import { TypingHeading } from '@/components/typing-heading';
 import { feeFor } from '@/modules/payments/fees';
 
 export default async function Home() {
@@ -390,7 +391,9 @@ async function PlatformLanding() {
         <section id="how" className="scroll-mt-28 border-b border-ink-300">
           <div className="mx-auto max-w-marketing px-4 py-20 md:px-8 md:py-28">
             <p className="t-caption m-0 text-ink-500">How admission works</p>
-            <h2 className="t-display mt-4 mb-0">Apply. Study. Qualify.</h2>
+            <div className="mt-4">
+              <TypingHeading text="Apply. Study. Qualify." className="t-display m-0" />
+            </div>
             <ol className="mt-14 grid list-none gap-5 p-0 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
                 <li

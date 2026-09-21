@@ -119,6 +119,23 @@ describe('reduced motion is handled the way §9 requires', () => {
     expect(hero).toMatch(/Stop the rotating headline/);
   });
 
+  it('lets the one typing loop be stopped, and never starts it with motion reduced', () => {
+    // Brief §0.4: "Apply. Study. Qualify." is the product's single recorded
+    // exception to §9's ban on decorative loops. These are its conditions.
+    const typing = readFileSync(join(SRC, 'components', 'typing-heading.tsx'), 'utf8');
+    expect(typing).toContain('(prefers-reduced-motion: reduce)');
+    expect(typing).toMatch(/Stop the typing headline/);
+    expect(typing).toMatch(/aria-hidden="true"/);
+    expect(typing).toMatch(/sr-only/);
+  });
+
+  it('keeps the typing loop to the one heading it was granted for', () => {
+    const users = SOURCES.filter(
+      (f) => !f.endsWith('typing-heading.tsx') && /TypingHeading/.test(code(f)),
+    );
+    expect(users.map((f) => f.replace(SRC, 'src').split('\\').join('/'))).toEqual(['src/app/page.tsx']);
+  });
+
   it('pairs the payment bar with a live status line', () => {
     // §9: "the PY-02 payment bar becomes a static bar plus a text status line
     // that updates via aria-live".
