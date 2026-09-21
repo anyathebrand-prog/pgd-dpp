@@ -33,14 +33,30 @@ export async function TopBar() {
     <header className="border-b border-ink-300 bg-surface">
       <div className="mx-auto flex h-16 max-w-[1120px] items-center gap-6 px-4 md:px-8">
         <Link href="/" className="flex items-center gap-2 no-underline">
-          {/* The institution mark is one of exactly four places --tenant-brand
-              is permitted to appear (§2.5). */}
-          <span
-            className="inline-block h-6 w-1.5"
-            style={{ background: 'var(--tenant-brand)' }}
-            aria-hidden="true"
-          />
-          <span className="t-label text-ink-900">{inst?.shortName ?? 'PGD-DPP'}</span>
+          {/* On a university's host, that university: a student there is on
+              its portal. Everywhere else, the operator's logo, on a white
+              panel for the same reason as on PB-01. The institution mark is
+              one of exactly four places --tenant-brand may appear (§2.5). */}
+          {inst ? (
+            <>
+              <span
+                className="inline-block h-6 w-1.5"
+                style={{ background: 'var(--tenant-brand)' }}
+                aria-hidden="true"
+              />
+              <span className="t-label text-ink-900">{inst.shortName}</span>
+            </>
+          ) : (
+            <span className="inline-flex items-center rounded-md bg-ink-900 px-2 py-1">
+              <img
+                src="/brand/dph-logo-header.png"
+                alt="Data Protection Hub Limited, home"
+                width={640}
+                height={226}
+                className="h-7 w-auto"
+              />
+            </span>
+          )}
         </Link>
 
         <nav aria-label="Main" className="hidden flex-1 gap-5 md:flex">

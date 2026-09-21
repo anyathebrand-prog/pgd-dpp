@@ -99,8 +99,17 @@ export function LandingNav() {
       <header className="border-b border-ink-300 bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex min-h-16 max-w-marketing items-center gap-6 px-4 py-2 md:px-8">
           <Link href="/" className="flex items-center gap-2 no-underline">
-            <span className="inline-block h-6 w-1.5 bg-authority" aria-hidden="true" />
-            <span className="t-label text-ink-900">PGD-DPP</span>
+            {/* On a white panel: the logo's navy lettering is about 2:1 on
+                the navy page, and a brand mark is not recoloured to fit. */}
+            <span className="inline-flex items-center rounded-md bg-ink-900 px-2.5 py-1.5">
+              <img
+                src="/brand/dph-logo-header.png"
+                alt="Data Protection Hub Limited, home"
+                width={640}
+                height={226}
+                className="h-9 w-auto md:h-11"
+              />
+            </span>
           </Link>
 
           <nav aria-label="Main" className="ml-auto hidden items-center gap-1 lg:flex">

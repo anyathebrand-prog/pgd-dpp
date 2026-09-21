@@ -660,22 +660,40 @@ async function PlatformLanding() {
                   meta: 'For an employer holding a certificate and a code',
                 },
               ].map((link) => (
-                <li key={link.href} className="hairline motion-state flex rounded-lg hover:bg-ink-100/40">
+                <li
+                  key={link.href}
+                  // Off-white at rest, navy ink (16.6:1, body 9.0:1); on hover
+                  // the accent blue with off-white ink (4.8:1). The focus ring
+                  // is blue here, because the global white ring vanishes on an
+                  // off-white card.
+                  className="group motion-state flex rounded-lg bg-ink-900 hover:bg-accent-deep"
+                >
                   {link.external ? (
-                    <a href={link.href} rel="noopener" className="block w-full p-7 no-underline">
-                      <span className="t-h4 text-ink-900">
+                    <a
+                      href={link.href}
+                      rel="noopener"
+                      className="block w-full rounded-lg p-7 no-underline focus-visible:outline-accent-deep"
+                    >
+                      <span className="t-h4 motion-state text-surface group-hover:text-ink-900">
                         {link.label}
                         <span aria-hidden="true"> ↗</span>
                       </span>
-                      <span className="t-body-sm mt-3 block text-ink-700">{link.meta}</span>
+                      <span className="t-body-sm motion-state mt-3 block text-[#394563] group-hover:text-ink-900">
+                        {link.meta}
+                      </span>
                     </a>
                   ) : (
-                    <Link href={link.href} className="block w-full p-7 no-underline">
-                      <span className="t-h4 text-ink-900">
+                    <Link
+                      href={link.href}
+                      className="block w-full rounded-lg p-7 no-underline focus-visible:outline-accent-deep"
+                    >
+                      <span className="t-h4 motion-state text-surface group-hover:text-ink-900">
                         {link.label}
                         <span aria-hidden="true"> →</span>
                       </span>
-                      <span className="t-body-sm mt-3 block text-ink-700">{link.meta}</span>
+                      <span className="t-body-sm motion-state mt-3 block text-[#394563] group-hover:text-ink-900">
+                        {link.meta}
+                      </span>
                     </Link>
                   )}
                 </li>

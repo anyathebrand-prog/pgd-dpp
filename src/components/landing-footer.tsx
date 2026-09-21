@@ -43,10 +43,16 @@ export function LandingFooter() {
       <div className="mx-auto max-w-marketing px-4 py-12 md:px-8">
         <div className="grid gap-10 md:grid-cols-[1.3fr_repeat(3,1fr)]">
           <div>
-            <p className="t-label m-0 flex items-center gap-2">
-              <span className="inline-block h-5 w-1.5 bg-accent" aria-hidden="true" />
-              PGD-DPP
-            </p>
+            <span className="inline-flex rounded-md bg-ink-900 p-3">
+              <img
+                src="/brand/dph-logo-1200.png"
+                alt="Data Protection Hub Limited: data privacy, risk management, compliance, training, advisory"
+                width={1200}
+                height={461}
+                loading="lazy"
+                className="h-auto w-full max-w-[280px]"
+              />
+            </span>
             <p className="t-body-sm measure mt-3 mb-0 text-ink-700">
               A Post Graduate Diploma in Data Protection &amp; Privacy, run by accredited Nigerian
               universities on one platform. Each university admits, teaches and awards; the platform
