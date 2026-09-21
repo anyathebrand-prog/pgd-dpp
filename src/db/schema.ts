@@ -1199,6 +1199,58 @@ export const dataSubjectRequests = pgTable('data_subject_requests', {
 });
 
 /** CMP-09. The 72-hour notification clock runs from `discoveredAt`. */
+/**
+ * CMP-08 — the Standard Notice to Address Grievance (GAID Article 40(2),
+ * Schedule 2).
+ *
+ * A data subject serves a standardised notice; the controller must respond
+ * substantively and record the outcome. "Substantively" is the word the PRD
+ * underlines, and it is why `response_type` is a closed choice rather than a
+ * free-text field: the response either accepts that a violation occurred and
+ * states the remedy, or explains why none did. A reply that does neither is
+ * not a response to a SNAG, and the schema will not store one as if it were.
+ *
+ * The outcome matters as much as the response. Unresolved, the subject may
+ * escalate to the NDPC or sue, and a regulator reading this register will ask
+ * which of those happened — so escalation is recorded, not left implied.
+ *
+ * Shared, like the rest of the DPO's register: the DPO is a platform role
+ * (§6.3) working from a host with no tenant in scope. `institution_id` is
+ * provenance — which institution the grievance concerns — not scope.
+ */
+export const grievanceNotices = pgTable(
+  'grievance_notices',
+  {
+    id: id(),
+    institutionId: uuid('institution_id').references(() => institutions.id, {
+      onDelete: 'set null',
+    }),
+    subjectName: text('subject_name').notNull(),
+    subjectEmail: text('subject_email').notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
+    channel: text('channel', { enum: ['email', 'post', 'in_person', 'portal'] }).notNull(),
+    grievance: text('grievance').notNull(),
+    responseType: text('response_type', { enum: ['accepted_violation', 'no_violation'] }),
+    responseText: text('response_text'),
+    /** Required when a violation is accepted: what is being done about it. */
+    remedialAction: text('remedial_action'),
+    respondedAt: timestamp('responded_at', { withTimezone: true }),
+    respondedBy: uuid('responded_by').references(() => users.id, { onDelete: 'set null' }),
+    outcome: text('outcome', {
+      enum: ['resolved', 'escalated_ndpc', 'civil_proceedings', 'withdrawn'],
+    }),
+    outcomeNote: text('outcome_note'),
+    outcomeAt: timestamp('outcome_at', { withTimezone: true }),
+    status: text('status', { enum: ['open', 'responded', 'closed'] })
+      .notNull()
+      .default('open'),
+    loggedBy: uuid('logged_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('grievance_notices_status_idx').on(t.status, t.receivedAt)],
+);
+
 export const breaches = pgTable('breaches', {
   id: id(),
   institutionId: uuid('institution_id').references(() => institutions.id, { onDelete: 'set null' }),
@@ -1401,6 +1453,8 @@ export const SHARED_TABLES = [
   'consent_records',
   'data_subject_requests',
   'breaches',
+  // The DPO's register, read from a host with no tenant in scope.
+  'grievance_notices',
   'processing_activities',
   'retention_rules',
   // Provenance only, and no data subject in it at all — see searchEvents.

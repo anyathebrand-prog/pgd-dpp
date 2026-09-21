@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { desc, isNull, sql } from 'drizzle-orm';
 import { db, readAcrossTenants } from '@/db';
-import { breaches, consentRecords, dataSubjectRequests, documents, retentionRules } from '@/db/schema';
+import { breaches, consentRecords, dataSubjectRequests, documents, grievanceNotices, retentionRules } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { StaffBand, Panel, Banner, cx } from '@/components/ui';
+import { breachClock, formatClock } from '@/modules/compliance/breach-clock';
 
 /**
  * DP-01 DPO console.
@@ -32,6 +33,11 @@ export default async function DpoConsole() {
     .limit(5);
 
   const rules = await db.select().from(retentionRules);
+
+  // DP-04. Open means not yet answered substantively.
+  const [{ openSnags }] = await db
+    .select({ openSnags: sql<number>`count(*) filter (where ${grievanceNotices.status} = 'open')::int` })
+    .from(grievanceNotices);
 
   // documents is tenant-scoped, and the DPO is a platform-wide statutory role
   // (§6.3) whose whole job is to see overdue purges wherever they are.
@@ -150,10 +156,13 @@ export default async function DpoConsole() {
             ) : (
               <ul className="m-0 list-none space-y-3 p-0">
                 {openBreaches.map((b) => {
-                  const hoursLeft = Math.ceil(
-                    (b.discoveredAt.getTime() + 72 * 3_600_000 - Date.now()) / 3_600_000,
-                  );
-                  const notified = Boolean(b.ndpcNotifiedAt);
+                  // The register's own clock, so the two screens cannot
+                  // disagree about how long is left.
+                  const clock = breachClock({
+                    discoveredAt: b.discoveredAt,
+                    ndpcNotifiedAt: b.ndpcNotifiedAt,
+                  });
+                  const notified = clock.state === 'notified';
                   return (
                     <li key={b.id} className="rounded-md border border-ink-300 p-4">
                       <p className="t-h4 m-0 text-ink-900">{b.title}</p>
@@ -164,20 +173,27 @@ export default async function DpoConsole() {
                       <p
                         className={cx(
                           't-data mt-2 mb-0',
-                          notified ? 'text-verified-text' : hoursLeft <= 12 ? 'text-danger' : 'text-warning',
+                          notified
+                            ? 'text-verified-text'
+                            : clock.state === 'running'
+                              ? 'text-warning'
+                              : 'text-danger',
                         )}
                       >
                         {notified
-                          ? `NDPC notified ${b.ndpcNotifiedAt?.toLocaleString('en-NG')}`
-                          : hoursLeft > 0
-                            ? `${hoursLeft}h left to notify the NDPC`
-                            : `${Math.abs(hoursLeft)}h past the 72-hour deadline`}
+                          ? `NDPC notified ${b.ndpcNotifiedAt?.toLocaleString('en-NG')}${clock.late ? ', late' : ''}`
+                          : `${formatClock(clock.hoursLeft)} to notify the NDPC`}
                       </p>
                     </li>
                   );
                 })}
               </ul>
             )}
+            <p className="t-body-sm mt-4 mb-0">
+              <Link href="/dpo/breaches" className="text-ink-900 underline underline-offset-2">
+                Open the breach register
+              </Link>
+            </p>
           </section>
 
           <aside className="space-y-6">
@@ -205,6 +221,22 @@ export default async function DpoConsole() {
                 {consents.toLocaleString('en-NG')} decisions recorded, each bound to the privacy
                 notice version in force when it was given.
               </p>
+              <Link href="/dpo/consents" className="t-body-sm text-ink-900 underline underline-offset-2">
+                See the consent records
+              </Link>
+            </Panel>
+
+            <Panel title="Grievance notices">
+              <p className="t-body-sm m-0 mb-3 text-ink-700">
+                {openSnags === 0
+                  ? 'No SNAG is waiting for a response.'
+                  : `${openSnags} waiting for a substantive response.`}{' '}
+                GAID Article 40(2): accept the violation and state the remedy, or explain why none
+                occurred.
+              </p>
+              <Link href="/dpo/snag" className="t-body-sm text-ink-900 underline underline-offset-2">
+                Open the SNAG register
+              </Link>
             </Panel>
 
             <Panel title="Where requests come from">
