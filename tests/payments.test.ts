@@ -596,3 +596,41 @@ describe('a real payment is never lost to the dedupe index', () => {
     expect(after.status).toBe('success');
   });
 });
+
+/* ---------------------------------------------------------- PAY-09 in parts */
+
+/**
+ * A tuition plan is several transactions against one application. Only the
+ * first may enrol: a later part settling is a payment and nothing more, and
+ * if it ever enrolled again the unique index would fail the whole settlement
+ * — the webhook would 500 and the part would never be marked paid.
+ */
+describe('tuition paid in parts', () => {
+  it('enrols on the first part, and a later part settles without enrolling again', async () => {
+    const app = await makeApplication('offer_accepted');
+    const first = await makeTransaction(app.id, 'tuition', TUITION_KOBO / 2);
+    const second = await makeTransaction(app.id, 'tuition', TUITION_KOBO / 2);
+    await adminDb
+      .update(transactions)
+      .set({ installmentNumber: 1, installmentCount: 2 })
+      .where(eq(transactions.id, first.id));
+    await adminDb
+      .update(transactions)
+      .set({ installmentNumber: 2, installmentCount: 2, status: 'pending' })
+      .where(eq(transactions.id, second.id));
+
+    await POST(delivery('charge.success', first.reference, { amountKobo: TUITION_KOBO / 2 }));
+    const afterFirst = await adminDb.select().from(enrollments).where(eq(enrollments.userId, userId));
+    expect(afterFirst).toHaveLength(1);
+
+    const res = await POST(
+      delivery('charge.success', second.reference, { amountKobo: TUITION_KOBO / 2 }),
+    );
+    expect(res.status).toBe(200);
+
+    const [paid] = await adminDb.select().from(transactions).where(eq(transactions.id, second.id));
+    expect(paid.status).toBe('success');
+    const afterSecond = await adminDb.select().from(enrollments).where(eq(enrollments.userId, userId));
+    expect(afterSecond).toHaveLength(1);
+  });
+});

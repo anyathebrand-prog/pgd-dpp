@@ -6,6 +6,7 @@ import { assessments, lessonProgress, lessons, modules } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { markLessonComplete } from '@/modules/learning/actions';
+import { myPlan } from '@/modules/payments/plan';
 import { TopBar, Footer, BottomTabs } from '@/components/shell';
 import { Button, LinkButton, Panel } from '@/components/ui';
 
@@ -41,6 +42,39 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
       .limit(1),
   );
   if (!row || !row.published) notFound();
+
+  /*
+   * PAY-09's access gate on the second part. Pausing, not removing: the
+   * student's progress, submissions and grades are untouched, and the gate
+   * lifts the moment the overdue part settles. The page says exactly what is
+   * owed and links to paying it, rather than a bare "no access".
+   */
+  const plan = await myPlan(institution.id, me.userId);
+  if (plan.gated && plan.next) {
+    return (
+      <>
+        <TopBar />
+        <main id="main" className="mx-auto max-w-[720px] px-4 py-10 md:px-8">
+          <h1 className="t-h1 m-0 text-ink-900">Lessons are paused</h1>
+          <p className="t-body mt-4 text-ink-700">
+            Part {plan.next.installmentNumber} of your tuition was due on{' '}
+            {plan.next.dueAt?.toLocaleDateString('en-NG', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}{' '}
+            and has not been paid. Lessons resume the moment it settles. Your progress,
+            submissions and grades are all kept exactly as they are.
+          </p>
+          <div className="mt-8">
+            <LinkButton href="/pay/plan">Pay part {plan.next.installmentNumber}</LinkButton>
+          </div>
+        </main>
+        <BottomTabs />
+        <Footer />
+      </>
+    );
+  }
 
   const siblings = await withTenant(institution.id, (tx) =>
     tx

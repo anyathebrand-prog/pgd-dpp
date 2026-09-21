@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { enrollments, lessons, modules } from '@/db/schema';
+import { myPlan } from '@/modules/payments/plan';
 import { currentPrincipal } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
@@ -74,6 +75,18 @@ export async function GET(
       );
 
   if (!enrolled) return NextResponse.json({ error: 'Not yours to watch.' }, { status: 403 });
+
+  // PAY-09. Gating the lesson page and still serving its video by URL would
+  // be a gate with the back door open. Staff are never gated.
+  if (!teachesHere) {
+    const plan = await myPlan(row.institutionId, me.userId);
+    if (plan.gated) {
+      return NextResponse.json(
+        { error: 'A tuition payment is overdue. Lessons resume when it settles.' },
+        { status: 402 },
+      );
+    }
+  }
 
   const key = videoKey(row.institutionId, uid);
   const size = await objectSize(key);

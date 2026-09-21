@@ -10,6 +10,7 @@ import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
 import { initializeTransaction, newReference, splitFor } from '@/lib/paystack';
 import { feeFor, tuitionCart } from './fees';
+import { installmentDueDates, splitInstallments } from './installments';
 
 /* --------------------------------------------------------------------- PY-01 */
 
@@ -166,7 +167,7 @@ export async function declineOffer(_prev: FormState, form: FormData): Promise<Fo
 
 /* --------------------------------------------------------------------- PY-05 */
 
-export async function startTuitionCheckout(_prev: FormState, _form: FormData): Promise<FormState> {
+export async function startTuitionCheckout(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await requireUser();
   const institution = await requireInstitution();
   const h = await headers();
@@ -184,34 +185,62 @@ export async function startTuitionCheckout(_prev: FormState, _form: FormData): P
   const cart = await tuitionCart(institution.id, app.cohortId);
   if (cart.lines.length === 0) return { redirectTo: '/apply' };
 
-  const reference = newReference('TUI');
-  const split = splitFor(cart.totalKobo, institution.paystackSharePercent);
+  /*
+   * PAY-09. A plan is only on offer when the institution has turned it on,
+   * and the choice arrives from the form — but the number of parts never
+   * does. It is read from the institution, so a hand-made request cannot ask
+   * for twelve instalments of a fee the institution splits in two.
+   */
+  const parts =
+    form.get('plan') === 'installments' && institution.tuitionInstallments > 1
+      ? institution.tuitionInstallments
+      : 1;
+  const amounts = splitInstallments(cart.totalKobo, parts);
+  const dues = installmentDueDates(parts, new Date(), institution.installmentIntervalDays);
+  const references = amounts.map(() => newReference('TUI'));
+  const reference = references[0];
 
   await withTenant(institution.id, async (tx) => {
-    const [row] = await tx
-      .insert(transactions)
-      .values({
-        institutionId: institution.id,
-        userId: me.userId,
-        applicationId: app.id,
-        reference,
-        context: 'tuition',
-        amountKobo: cart.totalKobo,
-        subaccountCode: institution.paystackSubaccountCode,
-        institutionShareKobo: split.institutionShareKobo,
-        platformShareKobo: split.platformShareKobo,
-      })
-      .returning({ id: transactions.id });
+    for (const [i, amountKobo] of amounts.entries()) {
+      const split = splitFor(amountKobo, institution.paystackSharePercent);
+      const [row] = await tx
+        .insert(transactions)
+        .values({
+          institutionId: institution.id,
+          userId: me.userId,
+          applicationId: app.id,
+          reference: references[i],
+          context: 'tuition',
+          amountKobo,
+          subaccountCode: institution.paystackSubaccountCode,
+          institutionShareKobo: split.institutionShareKobo,
+          platformShareKobo: split.platformShareKobo,
+          // Only the first part goes to Paystack now. The rest are scheduled:
+          // not asked for yet, and invisible to the reconcile job, which
+          // checks pending rows against a Paystack that has never seen them.
+          status: i === 0 ? 'pending' : 'scheduled',
+          installmentNumber: parts > 1 ? i + 1 : null,
+          installmentCount: parts > 1 ? parts : null,
+          dueAt: parts > 1 ? dues[i] : null,
+        })
+        .returning({ id: transactions.id });
 
-    await tx.insert(transactionLines).values(
-      cart.lines.map((line) => ({
-        institutionId: institution.id,
-        transactionId: row.id,
-        feeItemId: line.id,
-        label: line.label,
-        amountKobo: line.amountKobo,
-      })),
-    );
+      // Paid in full, the receipt itemises the cart (PAY-01). Paid in parts,
+      // each part's receipt says which part it is — itemising the whole cart
+      // against one third of the money would misstate what was paid for.
+      const lines =
+        parts === 1
+          ? cart.lines.map((line) => ({
+              feeItemId: line.id,
+              label: line.label,
+              amountKobo: line.amountKobo,
+            }))
+          : [{ feeItemId: null, label: `Tuition and fees, part ${i + 1} of ${parts}`, amountKobo }];
+
+      await tx.insert(transactionLines).values(
+        lines.map((line) => ({ institutionId: institution.id, transactionId: row.id, ...line })),
+      );
+    }
   });
 
   await audit({
@@ -221,17 +250,82 @@ export async function startTuitionCheckout(_prev: FormState, _form: FormData): P
     subjectId: me.userId,
     entity: 'transactions',
     entityId: reference,
-    detail: { context: 'tuition', amountKobo: cart.totalKobo },
+    detail: { context: 'tuition', amountKobo: cart.totalKobo, parts },
   });
 
   const proto = process.env.APP_PROTOCOL ?? 'http';
   const init = await initializeTransaction({
     email: me.email,
-    amountKobo: cart.totalKobo,
+    amountKobo: amounts[0],
     reference,
     callbackUrl: `${proto}://${h.get('host')}/pay/pending/${reference}`,
     subaccountCode: institution.paystackSubaccountCode,
     metadata: { applicationId: app.id, institutionId: institution.id },
+  });
+
+  return { redirectTo: init.authorizationUrl };
+}
+
+/**
+ * PAY-09 — paying a later part of a tuition plan.
+ *
+ * In order: the earliest unpaid part is the one that can be paid, because
+ * the gate reads the earliest overdue part, and paying the third while the
+ * second is overdue would leave a student gated with money on account.
+ * Settlement needs nothing new — only the first tuition payment ever enrols,
+ * so a later part settles as a payment and nothing else.
+ */
+export async function payInstallment(_prev: FormState, form: FormData): Promise<FormState> {
+  const me = await requireUser();
+  const institution = await requireInstitution();
+  const h = await headers();
+
+  const transactionId = String(form.get('transactionId') ?? '');
+
+  const plan = await withTenant(institution.id, (tx) =>
+    tx
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.userId, me.userId), eq(transactions.context, 'tuition'))),
+  );
+  const unpaid = plan
+    .filter((t) => t.installmentNumber && t.status !== 'success' && t.status !== 'awaiting_approval')
+    .sort((a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0));
+
+  const txn = plan.find((t) => t.id === transactionId);
+  // Scoped by user above: another student's instalment is not found, which
+  // is the same answer as one that does not exist.
+  if (!txn || !txn.installmentNumber) return { error: 'That payment is not part of your plan.' };
+  if (txn.status === 'success') return { error: 'That part is already paid.' };
+  if (unpaid[0]?.id !== txn.id) {
+    return { error: `Pay part ${unpaid[0]?.installmentNumber} first — parts are paid in order.` };
+  }
+
+  await withTenant(institution.id, (tx) =>
+    tx
+      .update(transactions)
+      .set({ status: 'pending', updatedAt: new Date() })
+      .where(eq(transactions.id, txn.id)),
+  );
+
+  await audit({
+    action: 'payment.initialized',
+    institutionId: institution.id,
+    actorId: me.userId,
+    subjectId: me.userId,
+    entity: 'transactions',
+    entityId: txn.reference,
+    detail: { context: 'tuition', part: txn.installmentNumber, of: txn.installmentCount },
+  });
+
+  const proto = process.env.APP_PROTOCOL ?? 'http';
+  const init = await initializeTransaction({
+    email: me.email,
+    amountKobo: txn.amountKobo,
+    reference: txn.reference,
+    callbackUrl: `${proto}://${h.get('host')}/pay/pending/${txn.reference}`,
+    subaccountCode: institution.paystackSubaccountCode,
+    metadata: { applicationId: txn.applicationId, institutionId: institution.id },
   });
 
   return { redirectTo: init.authorizationUrl };

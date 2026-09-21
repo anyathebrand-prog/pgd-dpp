@@ -3,9 +3,10 @@ import { withTenant } from '@/db';
 import { cohorts, feeItems } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
-import { candidatesMidApplication } from '@/modules/admin/actions';
+import { candidatesMidApplication, setInstallmentPolicy } from '@/modules/admin/actions';
+import { ActionForm } from '@/components/form';
 import { FeeEditor } from '@/components/admin-panels';
-import { Banner, Naira, Panel, cx } from '@/components/ui';
+import { Banner, Field, Input, Naira, Panel, Select, cx } from '@/components/ui';
 
 /**
  * IA-03 fee schedule (PAY-01).
@@ -119,7 +120,46 @@ export default async function FeeSchedule() {
           </table>
         </div>
 
-        <aside>
+        <aside className="space-y-6">
+          <Panel title="Paying tuition in parts">
+            {/* PAY-09. Off by default: the option is hidden from candidates
+                entirely until an institution chooses to offer it. */}
+            <p className="t-body-sm mt-0 mb-4 text-ink-700">
+              {institution.tuitionInstallments > 1
+                ? `Offered: ${institution.tuitionInstallments} parts, ${institution.installmentIntervalDays} days apart. Lessons pause if a later part goes unpaid past its due date.`
+                : 'Not offered. Candidates see only the full payment.'}
+            </p>
+            <ActionForm action={setInstallmentPolicy} submitLabel="Save">
+              <div className="grid gap-x-6 md:grid-cols-2">
+                <Field label="Parts" name="parts" inputId="plan-parts" required>
+                  <Select
+                    id="plan-parts"
+                    name="parts"
+                    defaultValue={String(institution.tuitionInstallments)}
+                  >
+                    <option value="1">Full payment only</option>
+                    <option value="2">Two parts</option>
+                    <option value="3">Three parts</option>
+                  </Select>
+                </Field>
+                <Field label="Days between parts" name="intervalDays" inputId="plan-interval" required>
+                  <Input
+                    id="plan-interval"
+                    name="intervalDays"
+                    type="number"
+                    min={14}
+                    max={180}
+                    defaultValue={institution.installmentIntervalDays}
+                  />
+                </Field>
+              </div>
+            </ActionForm>
+            <p className="t-caption mt-3 mb-0 text-ink-700">
+              Applies to plans started from now. Anybody already on a plan keeps the dates they
+              agreed to.
+            </p>
+          </Panel>
+
           <Panel title="Set a fee">
             <FeeEditor
               kinds={KINDS.map((k) => ({ kind: k.kind, label: k.label }))}

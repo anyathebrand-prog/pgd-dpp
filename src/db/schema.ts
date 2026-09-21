@@ -83,6 +83,15 @@ export const institutions = pgTable(
     accessReviewedBy: uuid('access_reviewed_by'),
     /** §5.1: an offer lapses if the acceptance fee is unpaid within N days. */
     offerExpiryDays: integer('offer_expiry_days').notNull().default(14),
+    /**
+     * PAY-09. How many parts tuition may be paid in: 1 means no plan is
+     * offered, and the option is hidden entirely rather than shown disabled
+     * (PY-05). The institution decides, because it is the institution that
+     * carries the risk of a student who stops paying.
+     */
+    tuitionInstallments: integer('tuition_installments').notNull().default(1),
+    /** PAY-09. Days between one instalment falling due and the next. */
+    installmentIntervalDays: integer('installment_interval_days').notNull().default(60),
     status: text('status', { enum: ['provisioning', 'live', 'suspended'] })
       .notNull()
       .default('provisioning'),
@@ -495,7 +504,21 @@ export const transactions = pgTable(
       .notNull()
       .default('paystack'),
     status: text('status', {
-      enum: ['pending', 'success', 'failed', 'abandoned', 'awaiting_approval', 'reversed'],
+      enum: [
+        'pending',
+        'success',
+        'failed',
+        'abandoned',
+        'awaiting_approval',
+        'reversed',
+        /*
+         * PAY-09: a later instalment, not yet asked for. Distinct from
+         * `pending`, which means a checkout was opened with Paystack: the
+         * reconcile job checks every pending row against Paystack, and a
+         * future instalment has never been sent there.
+         */
+        'scheduled',
+      ],
     })
       .notNull()
       .default('pending'),
@@ -507,6 +530,11 @@ export const transactions = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     /** PAY-10: one reminder, 24h hold. */
     recoveryEmailSentAt: timestamp('recovery_email_sent_at', { withTimezone: true }),
+    /** PAY-09: which part of a plan this is, and how many parts there are. */
+    installmentNumber: integer('installment_number'),
+    installmentCount: integer('installment_count'),
+    /** PAY-09: when it falls due. Past this, unpaid, learning is gated. */
+    dueAt: timestamp('due_at', { withTimezone: true }),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

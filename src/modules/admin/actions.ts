@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { withTenant } from '@/db';
+import { db, withTenant } from '@/db';
 import { applications, cohorts, feeItems, institutions } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
@@ -253,4 +253,43 @@ export async function saveBranding(_prev: FormState, form: FormData): Promise<Fo
 
   revalidatePath('/admin/branding');
   return { notice: `Saved. ${check.hex} reaches ${check.ratio.toFixed(2)}:1 against the page.` };
+}
+
+/**
+ * PAY-09 — whether tuition may be paid in parts, and how far apart.
+ *
+ * The institution's decision, because the institution carries the risk of a
+ * student who stops paying. It applies to plans started after the change:
+ * a student already on a plan keeps the schedule they agreed to, since
+ * rewriting somebody's due dates under them is the fee-versioning problem
+ * gap G-19 describes, for instalments.
+ */
+export async function setInstallmentPolicy(_prev: FormState, form: FormData): Promise<FormState> {
+  const institution = await requireInstitution();
+  const me = await requireRole('institution_admin');
+
+  const parts = Number(form.get('parts'));
+  const interval = Number(form.get('intervalDays'));
+
+  if (![1, 2, 3].includes(parts)) return { error: 'Tuition can be paid in one, two or three parts.' };
+  if (!Number.isInteger(interval) || interval < 14 || interval > 180) {
+    return { error: 'The gap between parts is between 14 and 180 days.' };
+  }
+
+  await db
+    .update(institutions)
+    .set({ tuitionInstallments: parts, installmentIntervalDays: interval, updatedAt: new Date() })
+    .where(eq(institutions.id, institution.id));
+
+  await audit({
+    action: 'fees.installment_policy_set',
+    institutionId: institution.id,
+    actorId: me.userId,
+    actorRole: 'institution_admin',
+    entity: 'institutions',
+    entityId: institution.id,
+    detail: { parts, interval },
+  });
+
+  return { redirectTo: `/admin/fees?plan=${parts}` };
 }

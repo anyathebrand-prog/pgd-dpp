@@ -9,6 +9,7 @@ import { tuitionCart } from '@/modules/payments/fees';
 import { startTuitionCheckout } from '@/modules/payments/actions';
 import { Banner, Naira, Record } from '@/components/ui';
 import { ActionButton } from '@/components/action-button';
+import { installmentDueDates, splitInstallments } from '@/modules/payments/installments';
 
 /**
  * PY-05. PAY-01's cart: acceptance fee, tuition and whatever mandatory levies
@@ -32,6 +33,18 @@ export default async function TuitionCheckout() {
   if (!app) redirect('/apply');
 
   const cart = await tuitionCart(institution.id, app.cohortId);
+
+  // PAY-09. Offered only when the institution has turned it on; otherwise
+  // the option does not exist on the page at all (PY-05: hidden entirely,
+  // not shown and disabled).
+  const parts = institution.tuitionInstallments;
+  const plan =
+    parts > 1 && cart.totalKobo > 0
+      ? {
+          amounts: splitInstallments(cart.totalKobo, parts),
+          dues: installmentDueDates(parts, new Date(), institution.installmentIntervalDays),
+        }
+      : null;
 
   return (
     <main id="main" className="mx-auto max-w-[640px] px-4 py-12">
@@ -70,8 +83,44 @@ export default async function TuitionCheckout() {
           action={startTuitionCheckout}
           label={`Pay ₦${(cart.totalKobo / 100).toLocaleString('en-NG')} and enrol`}
           pendingLabel="Opening checkout"
+          hidden={{ plan: 'full' }}
         />
       </div>
+
+      {plan ? (
+        <div className="mt-10 border-t border-ink-300 pt-8">
+          <h2 className="t-h3 m-0 text-ink-900">Or pay in {parts} parts</h2>
+          <p className="t-body-sm mt-2 mb-4 text-ink-700">
+            You are enrolled when the first part settles. If a later part is not paid by its due
+            date, lessons are paused until it is, and resume the moment it settles. Nothing you
+            have done is lost in the meantime.
+          </p>
+          <ol className="m-0 mb-6 grid list-none gap-2 p-0">
+            {plan.amounts.map((amount, i) => (
+              <li key={i} className="t-body-sm flex justify-between gap-4 text-ink-900">
+                <span>
+                  Part {i + 1}
+                  <span className="text-ink-700">
+                    {' '}
+                    ·{' '}
+                    {i === 0
+                      ? 'now'
+                      : `due ${plan.dues[i].toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+                  </span>
+                </span>
+                <Naira kobo={amount} />
+              </li>
+            ))}
+          </ol>
+          <ActionButton
+            action={startTuitionCheckout}
+            label={`Pay part 1, ₦${(plan.amounts[0] / 100).toLocaleString('en-NG')}, and enrol`}
+            pendingLabel="Opening checkout"
+            variant="secondary"
+            hidden={{ plan: 'installments' }}
+          />
+        </div>
+      ) : null}
 
       {/* PAY-11: tuition is the payment most often settled by an employer or a
           state agency, by transfer. Finding that out by failing a card payment

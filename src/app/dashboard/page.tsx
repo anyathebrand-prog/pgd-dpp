@@ -13,8 +13,9 @@ import {
 } from '@/db/schema';
 import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
+import { myPlan } from '@/modules/payments/plan';
 import { BottomTabs, Footer, TopBar } from '@/components/shell';
-import { DataString, EmptyState, LinkButton, Panel, Record } from '@/components/ui';
+import { Banner, DataString, EmptyState, LinkButton, Panel, Record } from '@/components/ui';
 
 /**
  * ST-01 student dashboard.
@@ -35,6 +36,9 @@ export default async function Dashboard() {
       .limit(1),
   );
   if (!enrollment) redirect('/apply');
+
+  // PAY-09. The same reading the lesson page gates on.
+  const plan = await myPlan(institution.id, me.userId);
 
   const [cohort] = await withTenant(institution.id, (tx) =>
     tx.select().from(cohorts).where(eq(cohorts.id, enrollment.cohortId)).limit(1),
@@ -90,6 +94,33 @@ export default async function Dashboard() {
         <p className="t-caption mt-2 text-ink-700">
           <DataString value={enrollment.matricNumber} label="Matriculation number" /> · {cohort?.name}
         </p>
+
+        {plan.gated && plan.next ? (
+          <div className="mt-8">
+            <Banner tone="danger" title={`Part ${plan.next.installmentNumber} of your tuition is overdue`}>
+              <p>
+                Lessons are paused until it settles. Your progress and grades are kept.{' '}
+                <Link href="/pay/plan" className="text-ink-900 underline underline-offset-2">
+                  Pay it now
+                </Link>
+                .
+              </p>
+            </Banner>
+          </div>
+        ) : plan.dueSoon && plan.next ? (
+          <div className="mt-8">
+            <Banner tone="warning" title={`Part ${plan.next.installmentNumber} of your tuition is due soon`}>
+              <p>
+                Due{' '}
+                {plan.next.dueAt?.toLocaleDateString('en-NG', { day: 'numeric', month: 'long' })}.{' '}
+                <Link href="/pay/plan" className="text-ink-900 underline underline-offset-2">
+                  See your plan
+                </Link>
+                .
+              </p>
+            </Banner>
+          </div>
+        ) : null}
 
         <div className="mt-10 grid gap-8 md:grid-cols-[2fr_1fr]">
           <div className="space-y-6">
