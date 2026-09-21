@@ -5,7 +5,7 @@ import { cohorts, institutions, libraryItems, programmes } from '@/db/schema';
 import { currentInstitution, tenantUrl } from '@/lib/tenant';
 import { marketingImages } from '@/lib/marketing-images';
 import { Footer, TopBar } from '@/components/shell';
-import { LinkButton, Naira, Panel, Record, Redacted } from '@/components/ui';
+import { LinkButton, Naira, Panel, Record, Redacted, cx } from '@/components/ui';
 import { LandingNav } from '@/components/landing-nav';
 import { LandingFooter } from '@/components/landing-footer';
 import { RotatingClaim } from '@/components/landing-hero';
@@ -178,36 +178,102 @@ async function PlatformLanding() {
     <>
       <LandingNav />
       <main id="main">
-        {/* 1. Hero. The headline is the image, set in the soft blue glow. */}
-        <section className="glow-hero border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 pt-16 pb-20 md:px-8 md:pt-28 md:pb-28">
-            <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:gap-16">
-              <div>
-                <p className="motion-rise hairline t-caption m-0 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-ink-700">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-verified-fill" aria-hidden="true" />
-                  Post Graduate Diploma · NDPA 2023 and GAID 2025
-                </p>
-                <h1 className="motion-rise motion-rise-1 t-display mt-6 mb-0 max-w-[16ch] text-ink-900">
-                  A qualification in{' '}
-                  <span className="motion-redaction">Data Protection</span> and Privacy
-                </h1>
-                <div className="motion-rise motion-rise-2 t-body-lg max-w-[46ch] text-ink-700">
-                  <RotatingClaim
-                    claims={[
-                      `One application. ${word} ${plural}.`,
-                      'Taught as the Act is enforced, not as it is summarised.',
-                      'A certificate an employer can verify in seconds.',
-                    ]}
-                  />
-                </div>
-                <div className="motion-rise motion-rise-3 mt-10 flex flex-wrap items-center gap-4">
-                  <LinkButton href="/programmes">See {word.toLowerCase()} {plural}</LinkButton>
-                  <LinkButton href="/verify" variant="secondary">
-                    Verify a certificate
-                  </LinkButton>
-                </div>
-              </div>
+        {/* 1. Hero. The photograph carries it: someone studying at home, the
+            secure connection she is working over. On a wide screen the words
+            sit on a navy gradient over the bright window; on a phone the
+            photograph comes first and fades into them. Without the file, the
+            hero falls back to the glow alone. */}
+        <section className={cx('relative overflow-hidden border-b border-ink-300', !photo.hero && 'glow-hero')}>
+          {photo.hero ? (
+            <>
+              <img
+                src={photo.hero}
+                srcSet={`/marketing/hero-1200.webp 1200w, ${photo.hero} 2400w`}
+                sizes="100vw"
+                alt="A professional studying at home on a laptop, over a secure connection"
+                width={2400}
+                height={1309}
+                fetchPriority="high"
+                decoding="async"
+                className="block aspect-[4/3] w-full object-cover object-[72%_center] lg:absolute lg:inset-0 lg:aspect-auto lg:h-full"
+              />
+              {/* Phone: fade the photograph into the page beneath it. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 aspect-[4/3] bg-[linear-gradient(to_bottom,transparent_55%,#08163c)] lg:hidden"
+              />
+              {/* Desktop: solid navy under the words, clearing to the right. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(to_right,#08163c_0%,#08163c_30%,rgba(8,22,60,0.75)_42%,rgba(8,22,60,0.1)_58%,transparent_68%),linear-gradient(to_top,#08163c_0%,transparent_22%)] lg:block"
+              />
+            </>
+          ) : null}
 
+          <div className="relative mx-auto max-w-marketing px-4 pt-2 pb-16 md:px-8 lg:flex lg:min-h-[86vh] lg:items-center lg:py-28">
+            <div className="max-w-[40rem]">
+              <p className="motion-rise hairline t-caption m-0 inline-flex items-center gap-2 rounded-full bg-surface/60 px-4 py-1.5 text-ink-700 backdrop-blur">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-verified-fill" aria-hidden="true" />
+                Post Graduate Diploma · NDPA 2023 and GAID 2025
+              </p>
+              <h1 className="motion-rise motion-rise-1 t-display mt-6 mb-0 text-ink-900">
+                A qualification in{' '}
+                <span className="motion-redaction">Data Protection</span> and Privacy
+              </h1>
+              <div className="motion-rise motion-rise-2 t-body-lg max-w-[44ch] text-ink-700">
+                <RotatingClaim
+                  claims={[
+                    `One application. ${word} ${plural}.`,
+                    'Taught as the Act is enforced, not as it is summarised.',
+                    'A certificate an employer can verify in seconds.',
+                  ]}
+                />
+              </div>
+              <div className="motion-rise motion-rise-3 mt-10 flex flex-wrap items-center gap-4">
+                <LinkButton href="/programmes">See {word.toLowerCase()} {plural}</LinkButton>
+                <LinkButton href="/verify" variant="secondary" className="bg-surface/40 backdrop-blur">
+                  Verify a certificate
+                </LinkButton>
+              </div>
+              <p className="motion-rise motion-rise-4 t-caption mt-10 mb-0 text-ink-500">
+                Studied online, at night, on a phone if need be. Awarded by the university you
+                apply to.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. Live figures, counted at request time. Display sized, as the
+            reference sets its numbers. */}
+        <section className="border-b border-ink-300">
+          <div className="mx-auto grid max-w-marketing items-center gap-14 px-4 py-16 md:px-8 md:py-20 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]">
+            <div>
+            <dl className="m-0 grid gap-10 md:grid-cols-3 md:gap-0 md:divide-x md:divide-ink-300">
+              {[
+                { term: 'Universities running it', value: live.length },
+                { term: 'Intakes open now', value: openIntakes },
+                { term: 'Items in the library', value: libraryCount },
+              ].map((fact, i) => (
+                <div
+                  key={fact.term}
+                  className={`flex flex-col-reverse ${i === 0 ? 'md:pr-10' : 'md:px-10'}`}
+                >
+                  <dt className="t-body-sm mt-2 m-0 text-ink-700">{fact.term}</dt>
+                  <dd className="t-display m-0 ml-0 tabular-nums">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {live.length > 0 ? (
+              <div className="mt-14 flex flex-wrap items-center gap-x-10 gap-y-4">
+                <p className="t-caption m-0 text-ink-500">Taught and awarded by</p>
+                {live.map((inst) => (
+                  <span key={inst.id} className="t-h3 text-ink-700">
+                    {inst.shortName}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            </div>
               {/* The one filed artefact on this screen: what an issued
                   certificate actually says. */}
               <aside aria-label="Specimen certificate">
@@ -236,39 +302,6 @@ async function PlatformLanding() {
                   </p>
                 </div>
               </aside>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. Live figures, counted at request time. Display sized, as the
-            reference sets its numbers. */}
-        <section className="border-b border-ink-300">
-          <div className="mx-auto max-w-marketing px-4 py-16 md:px-8 md:py-20">
-            <dl className="m-0 grid gap-10 md:grid-cols-3 md:gap-0 md:divide-x md:divide-ink-300">
-              {[
-                { term: 'Universities running it', value: live.length },
-                { term: 'Intakes open now', value: openIntakes },
-                { term: 'Items in the library', value: libraryCount },
-              ].map((fact, i) => (
-                <div
-                  key={fact.term}
-                  className={`flex flex-col-reverse ${i === 0 ? 'md:pr-10' : 'md:px-10'}`}
-                >
-                  <dt className="t-body-sm mt-2 m-0 text-ink-700">{fact.term}</dt>
-                  <dd className="t-display m-0 ml-0 tabular-nums">{fact.value}</dd>
-                </div>
-              ))}
-            </dl>
-            {live.length > 0 ? (
-              <div className="mt-14 flex flex-wrap items-center gap-x-10 gap-y-4">
-                <p className="t-caption m-0 text-ink-500">Taught and awarded by</p>
-                {live.map((inst) => (
-                  <span key={inst.id} className="t-h3 text-ink-700">
-                    {inst.shortName}
-                  </span>
-                ))}
-              </div>
-            ) : null}
           </div>
         </section>
 

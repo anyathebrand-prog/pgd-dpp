@@ -15,11 +15,11 @@ import { cache } from 'react';
  *
  * See public/marketing/README.md for the filenames and the two rules.
  */
-const SLOTS = ['registry', 'faculty', 'study', 'convocation'] as const;
+const SLOTS = ['hero', 'registry', 'faculty', 'study', 'convocation'] as const;
 
 export type Slot = (typeof SLOTS)[number];
 
-const EXTENSIONS = ['jpg', 'jpeg', 'webp', 'png'];
+const EXTENSIONS = ['webp', 'jpg', 'jpeg', 'png'];
 
 export const marketingImages = cache((): Record<Slot, string | null> => {
   const dir = join(process.cwd(), 'public', 'marketing');

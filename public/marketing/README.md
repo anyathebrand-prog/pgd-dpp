@@ -7,10 +7,11 @@ photograph leaves a clean layout rather than a broken image icon.
 Nothing here is required for the page to work. Add them one at a time and
 reload.
 
-## The four slots
+## The five slots
 
 | File | Shape | Minimum size | What it should show |
 |---|---|---|---|
+| `hero.webp` + `hero-1200.webp` | 16:9 | 2400 wide + 1200 wide | The hero. Subject on the right third, the left kept quiet: on desktop the headline sits on a navy gradient over it. Supplied: a professional studying at home over a secure connection. |
 | `registry.jpg` | 16:9 | 1600 x 900 | A records or registry office. Folders, drawers, a desk mid-work. The page's one wide band. |
 | `faculty.jpg` | 4:3 | 1200 x 900 | The exterior or a working interior of a partner university. Something a candidate could recognise. |
 | `study.jpg` | 3:2 | 1200 x 800 | Somebody reading or working. Unposed, ordinary light. |
