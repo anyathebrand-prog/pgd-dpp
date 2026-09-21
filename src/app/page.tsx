@@ -69,21 +69,81 @@ const SYLLABUS = [
 const STEPS = [
   {
     title: 'Apply to one university',
+    icon: 'apply' as const,
     body: 'One form, one set of documents, one application fee, set by the institution you chose and disclosed before you pay it.',
   },
   {
     title: 'The registry reviews it',
+    icon: 'review' as const,
     body: 'Staff at that university admit or decline, and you are told which, with a reason. Nothing about that decision happens without their hand on it.',
   },
   {
     title: 'Accept, pay tuition, enrol',
+    icon: 'pay' as const,
     body: 'Tuition is charged only after you have been offered a place and accepted it. Your matriculation number is issued when the payment settles.',
   },
   {
     title: 'Study, qualify, be verified',
+    icon: 'qualify' as const,
     body: 'Modules, assessment and the library online. The certificate carries a code an employer can check in seconds, without an account.',
   },
 ];
+
+/*
+ * Step icons for "Apply. Study. Qualify." Inline, in Lucide's grammar (24px
+ * grid, 1.75 stroke, round caps), so the page ships no icon library for
+ * four glyphs. Decorative: each card's heading already says what it is.
+ */
+function StepIcon({ name }: { name: 'apply' | 'review' | 'pay' | 'qualify' }) {
+  const paths = {
+    // A document with a folded corner and lines of text.
+    apply: (
+      <>
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+        <path d="M14 3v5h5" />
+        <path d="M9 13h6M9 17h4" />
+      </>
+    ),
+    // A clipboard with a tick: somebody checked it.
+    review: (
+      <>
+        <rect x="8" y="2" width="8" height="4" rx="1" />
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        <path d="m9 14 2 2 4-4" />
+      </>
+    ),
+    // A payment card.
+    pay: (
+      <>
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20M6 15h4" />
+      </>
+    ),
+    // A mortarboard, with a small verified tick.
+    qualify: (
+      <>
+        <path d="M22 9 12 4 2 9l10 5 10-5z" />
+        <path d="M6 11v5c0 1.5 2.7 3 6 3" />
+        <path d="m15.5 18 1.8 1.8 3.2-3.3" />
+      </>
+    ),
+  } as const;
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
 
 const HOLDINGS = [
   {
@@ -334,9 +394,14 @@ async function PlatformLanding() {
             <ol className="mt-14 grid list-none gap-5 p-0 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
                 <li key={step.title} className="hairline flex flex-col rounded-lg bg-ink-100/40 p-7">
-                  <span className="t-data text-accent" aria-hidden="true">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
+                  <div className="flex items-start justify-between">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-md bg-[linear-gradient(135deg,#184098,#1f6adc)] text-ink-900">
+                      <StepIcon name={step.icon} />
+                    </span>
+                    <span className="t-data text-accent" aria-hidden="true">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                  </div>
                   <h3 className="t-h3 mt-8 mb-3 text-ink-900">{step.title}</h3>
                   <p className="t-body-sm m-0 text-ink-700">{step.body}</p>
                 </li>
