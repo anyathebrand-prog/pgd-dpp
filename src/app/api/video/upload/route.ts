@@ -7,6 +7,7 @@ import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
 import { putObject, videoKey } from '@/lib/storage';
+import { streamConfig, uploadToStream } from '@/modules/learning/stream';
 
 /**
  * LRN-02 / FC-02 — attaching a video to a lesson.
@@ -60,14 +61,31 @@ export async function POST(request: Request) {
   );
   if (!row) return NextResponse.json({ error: 'That lesson does not exist.' }, { status: 404 });
 
-  const uid = randomUUID();
-  await putObject(videoKey(institution.id, uid), Buffer.from(await file.arrayBuffer()));
+  // With Stream configured, the recording goes there to be transcoded into
+  // an adaptive-bitrate ladder; otherwise it is stored as the MP4 it is.
+  const stream = streamConfig();
+  let uid: string;
+  if (stream) {
+    try {
+      uid = await uploadToStream(stream, file, { institutionId: institution.id, lessonId });
+    } catch (err) {
+      return NextResponse.json(
+        { error: `The video service did not accept the upload: ${(err as Error).message}. Try again shortly.` },
+        { status: 502 },
+      );
+    }
+  } else {
+    uid = randomUUID();
+    await putObject(videoKey(institution.id, uid), Buffer.from(await file.arrayBuffer()));
+  }
 
   await withTenant(institution.id, (tx) =>
     tx
       .update(lessons)
       .set({
         videoUid: uid,
+        videoProvider: stream ? 'cloudflare' : 'local',
+        videoStatus: stream ? 'processing' : 'ready',
         videoDurationSeconds: Number.isFinite(durationSeconds) && durationSeconds > 0
           ? Math.round(durationSeconds)
           : null,
@@ -86,7 +104,12 @@ export async function POST(request: Request) {
     actorRole: 'facilitator',
     entity: 'lessons',
     entityId: lessonId,
-    detail: { uid, sizeBytes: file.size, replaced: row.lesson.videoUid ?? null },
+    detail: {
+      uid,
+      provider: stream ? 'cloudflare' : 'local',
+      sizeBytes: file.size,
+      replaced: row.lesson.videoUid ?? null,
+    },
   });
 
   return NextResponse.json({ ok: true, uid });

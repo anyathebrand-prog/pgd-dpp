@@ -7,6 +7,9 @@ import { requireUser } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { markLessonComplete } from '@/modules/learning/actions';
 import { myPlan } from '@/modules/payments/plan';
+import { streamConfig, streamStatus } from '@/modules/learning/stream';
+import { playbackTtl, playbackUrls, signStreamToken } from '@/modules/learning/stream-token';
+import { videoAccess } from '@/modules/learning/video-access';
 import { TopBar, Footer, BottomTabs } from '@/components/shell';
 import { Button, LinkButton, Panel } from '@/components/ui';
 
@@ -18,10 +21,14 @@ import { Button, LinkButton, Panel } from '@/components/ui';
  * to a serif body is doing real work — the student is reading someone else's
  * document, and it should not look like the interface around it.
  *
- * The video element is deliberately plain and `preload="none"`: §8 asks for a
- * quality selector and an audio-only option on a 3G budget, and the worst thing
- * this page could do is autoload a megabyte of video for someone who came to
- * read.
+ * The video element is deliberately plain and `preload="none"`: the worst
+ * thing this page could do is autoload a megabyte of video for someone who
+ * came to read.
+ *
+ * LRN-02's adaptive bitrate comes from Cloudflare Stream where it is
+ * configured: its player picks a rendition for the connection and offers the
+ * quality selector §8 asks for. The playback URL is signed per page view, and
+ * only after the same access rule the MP4 route applies.
  */
 export default async function LessonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -94,6 +101,44 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
       .limit(1),
   );
 
+  /*
+   * LRN-02 on Stream. A video still transcoding is checked on view, and the
+   * row updated once it is ready, so nobody has to come back and flip it.
+   * No webhook, which also means no cross-tenant write from one.
+   */
+  let video = {
+    provider: row.lesson.videoProvider,
+    status: row.lesson.videoStatus,
+    iframe: null as string | null,
+  };
+  const stream = streamConfig();
+  if (row.lesson.videoUid && video.provider === 'cloudflare' && stream) {
+    if (video.status === 'processing') {
+      const fresh = await streamStatus(stream, row.lesson.videoUid).catch(() => null);
+      if (fresh && fresh.state !== 'processing') {
+        await withTenant(institution.id, (tx) =>
+          tx
+            .update(lessons)
+            .set({
+              videoStatus: fresh.state,
+              videoDurationSeconds: row.lesson.videoDurationSeconds ?? fresh.durationSeconds,
+            })
+            .where(eq(lessons.id, id)),
+        );
+        video = { ...video, status: fresh.state };
+      }
+    }
+    if (video.status === 'ready' && (await videoAccess(me, institution.id)) === 'ok') {
+      const token = signStreamToken({
+        keyId: stream.keyId,
+        pemBase64: stream.keyPem,
+        uid: row.lesson.videoUid,
+        ttlSeconds: playbackTtl(row.lesson.videoDurationSeconds),
+      });
+      video = { ...video, iframe: playbackUrls(stream.customerCode, token).iframe };
+    }
+  }
+
   const moduleAssessments = await withTenant(institution.id, (tx) =>
     tx
       .select()
@@ -116,7 +161,34 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
           {progress?.completedAt ? ' · completed' : ''}
         </p>
 
-        {row.lesson.videoUid ? (
+        {row.lesson.videoUid && video.provider === 'cloudflare' ? (
+          <div className="mt-8">
+            {video.iframe ? (
+              <div className="relative aspect-video w-full bg-ink-900">
+                <iframe
+                  src={video.iframe}
+                  title={`Video for ${row.lesson.title}`}
+                  loading="lazy"
+                  allow="encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+              </div>
+            ) : (
+              <p className="t-body-sm m-0 border border-ink-300 p-4 text-ink-700">
+                {video.status === 'processing'
+                  ? 'The video for this lesson is still being prepared. It usually takes a few minutes after upload.'
+                  : video.status === 'error'
+                    ? 'The video for this lesson could not be prepared. Your facilitator has been shown the same message.'
+                    : 'The video for this lesson is not available to you.'}
+              </p>
+            )}
+            <p className="t-caption mt-2 text-ink-700">
+              The video adjusts its quality to your connection. The written lesson below covers the
+              same ground, and nothing in the assessment depends on the video.
+            </p>
+          </div>
+        ) : row.lesson.videoUid ? (
           <div className="mt-8">
             <video
               controls

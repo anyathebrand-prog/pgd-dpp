@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
-import { enrollments, lessons, modules } from '@/db/schema';
-import { myPlan } from '@/modules/payments/plan';
+import { lessons, modules } from '@/db/schema';
+import { videoAccess } from '@/modules/learning/video-access';
 import { currentPrincipal } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
@@ -15,13 +15,10 @@ import { getObject, objectSize, videoKey } from '@/lib/storage';
  * player can seek and a phone can stop downloading when someone closes the
  * tab.
  *
- * What this is not: adaptive bitrate. §5.5 asks for ABR and that needs a
- * transcoding pipeline producing HLS renditions — a real piece of work and a
- * real bill, and not something to fake with a single MP4 and an optimistic
- * comment. Until it exists the lesson page says plainly that the written
- * lesson covers the same ground and that nothing in the assessment depends on
- * the video, which is the honest accommodation for the 3G connection §8
- * budgets for.
+ * What this is not: adaptive bitrate. That is Cloudflare Stream's job
+ * (`modules/learning/stream.ts`), and a lesson uploaded while Stream is
+ * configured never comes through here. This route is the fallback driver,
+ * and the path for videos uploaded before Stream was switched on.
  *
  * Access is the same shape as CMP-13's rule for documents: the URL is not the
  * authorisation. A lesson video belongs to a module at an institution, and
@@ -52,40 +49,18 @@ export async function GET(
   );
   if (!row) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
-  const teachesHere = me.allMemberships.some(
-    (m) =>
-      m.institutionId === row.institutionId &&
-      ['facilitator', 'institution_admin', 'super_admin'].includes(m.role),
-  );
+  const access = await videoAccess(me, row.institutionId);
+  if (access === 'not_enrolled') return NextResponse.json({ error: 'Not yours to watch.' }, { status: 403 });
+  if (access === 'payment_overdue') {
+    return NextResponse.json(
+      { error: 'A tuition payment is overdue. Lessons resume when it settles.' },
+      { status: 402 },
+    );
+  }
 
-  const [enrolled] = teachesHere
-    ? [{ id: 'staff' }]
-    : await withTenant(institution.id, (tx) =>
-        tx
-          .select({ id: enrollments.id })
-          .from(enrollments)
-          .where(
-            and(
-              eq(enrollments.userId, me.userId),
-              eq(enrollments.institutionId, row.institutionId),
-              eq(enrollments.status, 'active'),
-            ),
-          )
-          .limit(1),
-      );
-
-  if (!enrolled) return NextResponse.json({ error: 'Not yours to watch.' }, { status: 403 });
-
-  // PAY-09. Gating the lesson page and still serving its video by URL would
-  // be a gate with the back door open. Staff are never gated.
-  if (!teachesHere) {
-    const plan = await myPlan(row.institutionId, me.userId);
-    if (plan.gated) {
-      return NextResponse.json(
-        { error: 'A tuition payment is overdue. Lessons resume when it settles.' },
-        { status: 402 },
-      );
-    }
+  // A Stream video has no file here to serve; it plays from Stream.
+  if (row.lesson.videoProvider !== 'local') {
+    return NextResponse.json({ error: 'This video streams from the video service.' }, { status: 404 });
   }
 
   const key = videoKey(row.institutionId, uid);
@@ -138,7 +113,13 @@ export async function GET(
     action: 'lesson.video_opened',
     institutionId: row.institutionId,
     actorId: me.userId,
-    actorRole: teachesHere ? 'staff' : 'self',
+    actorRole: me.allMemberships.some(
+      (m) =>
+        m.institutionId === row.institutionId &&
+        ['facilitator', 'institution_admin', 'super_admin'].includes(m.role),
+    )
+      ? 'staff'
+      : 'self',
     entity: 'lessons',
     entityId: row.lesson.id,
   });

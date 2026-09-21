@@ -744,6 +744,14 @@ export const lessons = pgTable(
     body: text('body'),
     videoUid: text('video_uid'),
     videoDurationSeconds: integer('video_duration_seconds'),
+    /**
+     * LRN-02. `local` is progressive MP4 from object storage; `cloudflare` is
+     * Stream's adaptive-bitrate HLS. Recorded per lesson, so switching the
+     * platform to Stream leaves videos uploaded before it still playable.
+     */
+    videoProvider: text('video_provider', { enum: ['local', 'cloudflare'] }).notNull().default('local'),
+    /** Stream transcodes after upload; a lesson says so rather than showing a broken player. */
+    videoStatus: text('video_status', { enum: ['ready', 'processing', 'error'] }).notNull().default('ready'),
     /** LRN-09, where the institution permits it. */
     downloadable: boolean('downloadable').notNull().default(true),
     createdAt: createdAt(),
