@@ -34,3 +34,16 @@ export const marketingImages = cache((): Record<Slot, string | null> => {
 
   return found;
 });
+
+/**
+ * A partner university's own campus photograph, for its card under "Where
+ * you would be studying". Keyed by the institution's subdomain slug, so a
+ * new tenant gets one by adding `public/marketing/institutions/{slug}.webp`.
+ * The slug is validated before it reaches the filesystem.
+ */
+export const campusPhoto = cache((slug: string): string | null => {
+  if (!/^[a-z][a-z0-9-]{1,30}$/.test(slug)) return null;
+  const dir = join(process.cwd(), 'public', 'marketing', 'institutions');
+  const hit = EXTENSIONS.map((ext) => `${slug}.${ext}`).find((name) => existsSync(join(dir, name)));
+  return hit ? `/marketing/institutions/${hit}` : null;
+});

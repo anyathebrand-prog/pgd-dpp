@@ -40,3 +40,10 @@ Students on 3G are a stated product principle. Keep each file under about
 250KB; resize to the dimensions above rather than shipping a 4MB original.
 The page lazy-loads everything below the fold and reserves the space, so
 adding photographs will not move the layout while they load.
+
+## Campus photographs, per university
+
+`institutions/{slug}.webp` (for example `institutions/unilag.webp`), about 1200 x 630.
+It appears at the top of that university's card under "Where you would be studying",
+and only for the university it names. Use the institution's own campus, and only
+with its permission. A card with no file renders without a photograph.
