@@ -1228,6 +1228,34 @@ export const dataSubjectRequests = pgTable('data_subject_requests', {
 
 /** CMP-09. The 72-hour notification clock runs from `discoveredAt`. */
 /**
+ * CMP-17 — staff data protection training, one row per attempt.
+ *
+ * Attempts are kept, not only passes, because "did this person try and fail
+ * three times" is part of the answer to "is your staff trained". A pass
+ * carries an expiry a year out; the version records which text was passed,
+ * since a pass on content that has since changed materially no longer counts.
+ *
+ * Shared: training belongs to the person, and one person can be staff at
+ * more than one institution.
+ */
+export const staffTraining = pgTable(
+  'staff_training',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    score: integer('score').notNull(),
+    passed: boolean('passed').notNull(),
+    /** Set only on a pass. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('staff_training_user_idx').on(t.userId, t.createdAt)],
+);
+
+/**
  * CMP-08 — the Standard Notice to Address Grievance (GAID Article 40(2),
  * Schedule 2).
  *
@@ -1483,6 +1511,8 @@ export const SHARED_TABLES = [
   'breaches',
   // The DPO's register, read from a host with no tenant in scope.
   'grievance_notices',
+  // Training belongs to the person, who may be staff at several institutions.
+  'staff_training',
   'processing_activities',
   'retention_rules',
   // Provenance only, and no data subject in it at all — see searchEvents.

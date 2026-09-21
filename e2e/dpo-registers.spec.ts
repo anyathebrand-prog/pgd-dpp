@@ -143,6 +143,11 @@ test.describe('DP-05 the breach register', () => {
     const a = randomUUID();
     const b = randomUUID();
     const db = sql();
+    // The window is fixed, so rows planted by earlier runs would be counted
+    // too. Only the owner role can delete from audit_log; the app cannot.
+    await db`
+      DELETE FROM audit_log WHERE action = 'document.viewed'
+        AND created_at >= '2001-03-01' AND created_at < '2001-03-02'`;
     for (const [subject, at] of [
       [a, '2001-03-01T10:00:00Z'],
       [a, '2001-03-01T11:00:00Z'],

@@ -7,6 +7,7 @@ import { requireInstitution } from '@/lib/tenant';
 import { Banner, EmptyState, Panel, Record, cx } from '@/components/ui';
 import { GRANTABLE, ROLE_COPY, type GrantableRole } from '@/modules/admin/staff-roles';
 import { AttestForm, InviteForm, RevokeRole } from '@/components/staff-panels';
+import { trainingFor } from '@/modules/compliance/training-status';
 
 /**
  * IA-05 staff & roles — `{school}./admin/staff` (CMP-14, CMP-17).
@@ -21,6 +22,15 @@ import { AttestForm, InviteForm, RevokeRole } from '@/components/staff-panels';
  * completed setup cannot open the console at all — which looks to their
  * administrator like the account is broken rather than unfinished.
  */
+/** CMP-17, as the roster says it. */
+const TRAINING_LABEL: Record<string, string> = {
+  valid: 'Trained',
+  due_soon: 'Due within the month',
+  expired: 'Expired',
+  outdated: 'Needs retaking',
+  never: 'Not yet taken',
+};
+
 export default async function Staff({
   searchParams,
 }: {
@@ -78,6 +88,13 @@ export default async function Staff({
   }));
 
   const admins = people.filter((p) => p.roles.includes('institution_admin'));
+
+  // CMP-17: annual training, read the same way the DPO console reads it.
+  const training = await trainingFor(people.map((p) => p.userId));
+  const untrained = people.filter((p) => {
+    const t = training.get(p.userId)?.status;
+    return t !== 'valid' && t !== 'due_soon';
+  });
   const needsMfa = people.filter(
     (p) => p.roles.some((r) => ROLE_COPY[r].mfa) && !p.totpConfirmedAt,
   );
@@ -153,6 +170,22 @@ export default async function Staff({
         </div>
       ) : null}
 
+      {untrained.length > 0 ? (
+        <div className="mb-8">
+          <Banner tone="warning" title="Not everyone here has current training">
+            <p>
+              {untrained.map((p) => p.name ?? p.email).join(', ')}{' '}
+              {untrained.length === 1 ? 'has' : 'have'} not passed this year&apos;s data protection
+              training (CMP-17). It takes ten minutes, at{' '}
+              <Link href="/security/training" className="text-ink-900 underline underline-offset-2">
+                Data protection training
+              </Link>
+              .
+            </p>
+          </Banner>
+        </div>
+      ) : null}
+
       {needsMfa.length > 0 ? (
         <div className="mb-8">
           <Banner tone="warning" title="Second factor not yet set up">
@@ -188,7 +221,7 @@ export default async function Staff({
                     title={person.name ?? person.email}
                     meta={person.email}
                   >
-                    <dl className="m-0 mb-4 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
+                    <dl className="m-0 mb-4 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
                       <div>
                         <dt className="t-caption m-0 text-ink-700">Second factor</dt>
                         <dd
@@ -220,6 +253,21 @@ export default async function Staff({
                             : person.activated
                               ? 'Never'
                               : 'Invitation not yet accepted'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="t-caption m-0 text-ink-700">Training</dt>
+                        <dd
+                          className={cx(
+                            't-body-sm m-0 ml-0',
+                            training.get(person.userId)?.status === 'valid'
+                              ? 'text-verified-text'
+                              : training.get(person.userId)?.status === 'due_soon'
+                                ? 'text-ink-900'
+                                : 'text-warning',
+                          )}
+                        >
+                          {TRAINING_LABEL[training.get(person.userId)?.status ?? 'never']}
                         </dd>
                       </div>
                       <div>

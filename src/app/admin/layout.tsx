@@ -44,6 +44,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/payments/offline', label: 'Offline payments' },
     { href: '/admin/refunds', label: 'Refunds' },
     { href: '/admin/reconciliation', label: 'Reconciliation' },
+    // CMP-17: everybody working on records takes it, so everybody sees it.
+    { href: '/security/training', label: 'Training' },
   ];
 
   return (

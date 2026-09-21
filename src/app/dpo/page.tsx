@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { desc, isNull, sql } from 'drizzle-orm';
 import { db, readAcrossTenants } from '@/db';
-import { breaches, consentRecords, dataSubjectRequests, documents, grievanceNotices, retentionRules } from '@/db/schema';
+import { breaches, consentRecords, dataSubjectRequests, documents, grievanceNotices, memberships, retentionRules } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { StaffBand, Panel, Banner, cx } from '@/components/ui';
 import { breachClock, formatClock } from '@/modules/compliance/breach-clock';
+import { trainingFor } from '@/modules/compliance/training-status';
 
 /**
  * DP-01 DPO console.
@@ -33,6 +34,18 @@ export default async function DpoConsole() {
     .limit(5);
 
   const rules = await db.select().from(retentionRules);
+
+  // CMP-17. Everybody holding a staff role anywhere on the platform.
+  const staffRows = await db
+    .selectDistinct({ userId: memberships.userId })
+    .from(memberships)
+    .where(
+      sql`${memberships.role} in ('registry','institution_admin','facilitator','curator','dpo','super_admin')`,
+    );
+  const training = await trainingFor(staffRows.map((r) => r.userId));
+  const trainedCount = [...training.values()].filter(
+    (t) => t.status === 'valid' || t.status === 'due_soon',
+  ).length;
 
   // DP-04. Open means not yet answered substantively.
   const [{ openSnags }] = await db
@@ -223,6 +236,17 @@ export default async function DpoConsole() {
               </p>
               <Link href="/dpo/consents" className="t-body-sm text-ink-900 underline underline-offset-2">
                 See the consent records
+              </Link>
+            </Panel>
+
+            <Panel title="Staff training">
+              <p className="t-body-sm m-0 mb-3 text-ink-700">
+                {trainedCount} of {staffRows.length} staff have passed this year&apos;s data
+                protection training (CMP-17). Each institution&apos;s administrator sees who is
+                missing on their staff page.
+              </p>
+              <Link href="/security/training" className="t-body-sm text-ink-900 underline underline-offset-2">
+                The training itself
               </Link>
             </Panel>
 
