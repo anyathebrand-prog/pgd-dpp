@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { asc, inArray, sql } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { applications, cohorts } from '@/db/schema';
@@ -84,7 +85,15 @@ export default async function CohortCalendar() {
                           left <= 0 && c.status === 'open' && 'border-l-[3px] border-l-warning',
                         )}
                       >
-                        <td className="t-body-sm px-3 py-3 font-semibold text-ink-900">{c.name}</td>
+                        <td className="t-body-sm px-3 py-3 font-semibold text-ink-900">
+                          {/* RG-05: where the seats themselves are accounted for. */}
+                          <Link
+                            href={`/admin/cohorts/${c.id}`}
+                            className="text-ink-900 underline underline-offset-2"
+                          >
+                            {c.name}
+                          </Link>
+                        </td>
                         <td className="t-body-sm px-3 py-3 text-ink-700">{c.status}</td>
                         <td className="t-data px-3 py-3 text-ink-900">
                           {left} of {c.capacity}

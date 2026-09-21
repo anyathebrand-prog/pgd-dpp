@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { applications, cohorts, users } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { EmptyState, Panel, cx } from '@/components/ui';
+import { statusFilter } from '@/modules/admissions/queue-filter';
 
 /**
  * RG-01 application queue.
@@ -18,8 +19,6 @@ import { EmptyState, Panel, cx } from '@/components/ui';
  * turnaround becoming the funnel bottleneck. The queue should make the oldest
  * application impossible to miss.
  */
-const ACTIONABLE = ['submitted', 'under_review', 'documents_queried'] as const;
-
 export default async function ApplicationQueue({
   searchParams,
 }: {
@@ -45,11 +44,8 @@ export default async function ApplicationQueue({
       .from(applications)
       .innerJoin(users, eq(users.id, applications.userId))
       .innerJoin(cohorts, eq(cohorts.id, applications.cohortId))
-      .where(
-        status && status !== 'all'
-          ? eq(applications.status, status as 'submitted')
-          : inArray(applications.status, [...ACTIONABLE]),
-      )
+      // Shared with RG-06, so the export is exactly this view.
+      .where(statusFilter(status))
       .orderBy(desc(applications.submittedAt)),
   );
 
@@ -71,7 +67,7 @@ export default async function ApplicationQueue({
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="t-h1 m-0 text-ink-900">Applications</h1>
         <Link
-          href="/admin/applications/export"
+          href={`/admin/applications/export${status ? `?status=${encodeURIComponent(status)}` : ''}`}
           className="t-body-sm text-ink-700 underline underline-offset-2"
         >
           Export this view as CSV
