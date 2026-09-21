@@ -393,9 +393,15 @@ async function PlatformLanding() {
             <h2 className="t-display mt-4 mb-0">Apply. Study. Qualify.</h2>
             <ol className="mt-14 grid list-none gap-5 p-0 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
-                <li key={step.title} className="hairline flex flex-col rounded-lg bg-ink-100/40 p-7">
+                <li
+                  key={step.title}
+                  // Colour only on hover: §9 bans lift and scale on every
+                  // surface, and these cards are not links, so the change
+                  // is kept to a highlight rather than an invitation to click.
+                  className="group hairline motion-state flex flex-col rounded-lg bg-ink-100/40 p-7 hover:border-accent/60 hover:bg-ink-100/80"
+                >
                   <div className="flex items-start justify-between">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-md bg-[linear-gradient(135deg,#184098,#1f6adc)] text-ink-900">
+                    <span className="motion-state flex h-12 w-12 items-center justify-center rounded-md bg-[linear-gradient(135deg,#184098,#1f6adc)] text-ink-900 group-hover:bg-[linear-gradient(135deg,#1f6adc,#488eef)]">
                       <StepIcon name={step.icon} />
                     </span>
                     <span className="t-data text-accent" aria-hidden="true">

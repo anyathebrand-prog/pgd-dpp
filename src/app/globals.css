@@ -403,8 +403,11 @@ body {
 .glow-band {
   background-image: linear-gradient(135deg, #0d1f52 0%, #184098 55%, #1f6adc 100%);
 }
-.hairline {
-  border: 1px solid rgba(248, 248, 248, 0.12);
+/* In the utilities layer, so a hover:border-* utility can override it. */
+@layer utilities {
+  .hairline {
+    border: 1px solid rgba(248, 248, 248, 0.12);
+  }
 }
 
 /* ------------------------------------------------------- reduced motion */
