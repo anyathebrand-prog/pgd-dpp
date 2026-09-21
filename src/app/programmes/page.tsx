@@ -3,7 +3,8 @@ import { db, withTenant } from '@/db';
 import { cohorts, feeItems, institutions, programmes } from '@/db/schema';
 import { tenantUrl } from '@/lib/tenant';
 import { Footer, TopBar } from '@/components/shell';
-import { EmptyState, LinkButton, Naira, Record } from '@/components/ui';
+import { EmptyState, LinkButton, Naira } from '@/components/ui';
+import { InstitutionCard } from '@/components/institution-card';
 
 /**
  * PB-02 institution and programme browse.
@@ -72,7 +73,7 @@ export default async function Programmes() {
           <ul className="mt-12 grid list-none gap-5 p-0 md:grid-cols-2">
             {perInstitution.map(({ inst, intake, applicationFee, tuition, summary }) => {
               return (
-                <Record as="li" key={inst.id} title={inst.name} meta={inst.city ?? undefined}>
+                <InstitutionCard key={inst.id} inst={inst}>
                   {summary?.summary ? (
                     <p className="t-body-sm mt-0 mb-4 text-ink-700">{summary.summary}</p>
                   ) : null}
@@ -113,12 +114,12 @@ export default async function Programmes() {
                         Apply to {inst.shortName}
                       </LinkButton>
                     ) : (
-                      <LinkButton href={tenantUrl(inst.slug)} variant="secondary" size="dense">
+                      <LinkButton href={tenantUrl(inst.slug)} size="dense">
                         See the programme
                       </LinkButton>
                     )}
                   </div>
-                </Record>
+                </InstitutionCard>
               );
             })}
           </ul>

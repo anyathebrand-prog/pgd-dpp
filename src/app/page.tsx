@@ -3,7 +3,8 @@ import { and, asc, count, eq } from 'drizzle-orm';
 import { db, withTenant } from '@/db';
 import { cohorts, institutions, libraryItems, programmes } from '@/db/schema';
 import { currentInstitution, tenantUrl } from '@/lib/tenant';
-import { campusPhoto, marketingImages } from '@/lib/marketing-images';
+import { marketingImages } from '@/lib/marketing-images';
+import { InstitutionCard } from '@/components/institution-card';
 import { Footer, TopBar } from '@/components/shell';
 import { LinkButton, Naira, Panel, Record, Redacted, cx } from '@/components/ui';
 import { LandingNav } from '@/components/landing-nav';
@@ -458,48 +459,17 @@ async function PlatformLanding() {
               </p>
             ) : (
               <ul className="mt-12 grid list-none gap-5 p-0 md:grid-cols-2">
-                {live.map((inst) => {
-                  const campus = campusPhoto(inst.slug);
-                  return (
-                    // Hover is light and colour only (§9 bans lift and
-                    // scale): the photograph and the base brighten, the
-                    // outline turns white. 120ms, the state-change token.
-                    <li key={inst.id} className="group flex flex-col">
-                      {/* The campus itself, where the university has supplied
-                          one: the record below it is still the filed thing. */}
-                      {campus ? (
-                        <img
-                          src={campus}
-                          alt={`The main gate of the ${inst.name}`}
-                          width={1200}
-                          height={630}
-                          loading="lazy"
-                          decoding="async"
-                          className="aspect-[1200/630] w-full rounded-t-lg object-cover brightness-95 transition-[filter] duration-[120ms] group-hover:brightness-110"
-                        />
-                      ) : null}
-                      <Record
-                        title={inst.name}
-                        meta={inst.city ?? undefined}
-                        // The closing band's gradient. Every line on it is
-                        // off-white, because the grey secondary ink falls to
-                        // 3.3:1 at the bright end; 4.8:1 is the lowest here.
-                        className={cx(
-                          'glow-band motion-state flex-1 transition-[filter,border-color] group-hover:border-ink-900/50 group-hover:brightness-105 [&>div:first-child]:bg-ink-900 [&_p]:text-ink-900',
-                          campus && 'rounded-t-none border-t-0',
-                        )}
-                      >
-                        <p className="t-body-sm mt-0 mb-6">
-                          Applications, teaching and the certificate all carry {inst.shortName}
-                          &apos;s name.
-                        </p>
-                        <LinkButton href={tenantUrl(inst.slug)} size="dense">
-                          Open {inst.shortName}
-                        </LinkButton>
-                      </Record>
-                    </li>
-                  );
-                })}
+                {live.map((inst) => (
+                  <InstitutionCard key={inst.id} inst={inst}>
+                    <p className="t-body-sm mt-0 mb-6">
+                      Applications, teaching and the certificate all carry {inst.shortName}
+                      &apos;s name.
+                    </p>
+                    <LinkButton href={tenantUrl(inst.slug)} size="dense">
+                      Open {inst.shortName}
+                    </LinkButton>
+                  </InstitutionCard>
+                ))}
               </ul>
             )}
           </div>
