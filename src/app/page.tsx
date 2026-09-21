@@ -458,7 +458,10 @@ async function PlatformLanding() {
                 {live.map((inst) => {
                   const campus = campusPhoto(inst.slug);
                   return (
-                    <li key={inst.id} className="flex flex-col">
+                    // Hover is light and colour only (§9 bans lift and
+                    // scale): the photograph and the base brighten, the
+                    // outline turns white. 120ms, the state-change token.
+                    <li key={inst.id} className="group flex flex-col">
                       {/* The campus itself, where the university has supplied
                           one: the record below it is still the filed thing. */}
                       {campus ? (
@@ -469,7 +472,7 @@ async function PlatformLanding() {
                           height={630}
                           loading="lazy"
                           decoding="async"
-                          className="aspect-[1200/630] w-full rounded-t-lg object-cover"
+                          className="aspect-[1200/630] w-full rounded-t-lg object-cover brightness-95 transition-[filter] duration-[120ms] group-hover:brightness-110"
                         />
                       ) : null}
                       <Record
@@ -479,7 +482,7 @@ async function PlatformLanding() {
                         // off-white, because the grey secondary ink falls to
                         // 3.3:1 at the bright end; 4.8:1 is the lowest here.
                         className={cx(
-                          'glow-band flex-1 [&>div:first-child]:bg-ink-900 [&_p]:text-ink-900',
+                          'glow-band motion-state flex-1 transition-[filter,border-color] group-hover:border-ink-900/50 group-hover:brightness-105 [&>div:first-child]:bg-ink-900 [&_p]:text-ink-900',
                           campus && 'rounded-t-none border-t-0',
                         )}
                       >
