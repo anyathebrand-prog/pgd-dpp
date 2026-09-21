@@ -5,6 +5,7 @@ import { tenantUrl } from '@/lib/tenant';
 import { Footer, TopBar } from '@/components/shell';
 import { EmptyState, LinkButton, Naira } from '@/components/ui';
 import { InstitutionCard } from '@/components/institution-card';
+import { TypingHeading } from '@/components/typing-heading';
 
 /**
  * PB-02 institution and programme browse.
@@ -56,7 +57,7 @@ export default async function Programmes() {
     <>
       <TopBar />
       <main id="main" className="mx-auto max-w-[1200px] px-4 py-12 md:px-8">
-        <h1 className="t-h1 m-0 text-ink-900">Where you can study</h1>
+        <TypingHeading as="h1" text="Where you can study" className="t-display m-0 font-bold!" />
         <p className="t-body-lg measure mt-4 text-ink-700">
           The same diploma, awarded by each university under its own accreditation. Fees, entry
           requirements and calendars are set by the institution; the platform runs admissions,

@@ -43,9 +43,16 @@ Commissioned as a whole-platform redesign after flowninja.com. It changes how th
 - **§9 motion.** The reference animates headings on scroll; this product does not. Scroll-triggered entrances, hover lift and scale, parallax, shimmer and spinners stay banned everywhere, including PB-01. `tests/motion.test.ts` still enforces it.
 - **§10.** Every text pairing clears 4.5:1 on every ground: on the page, ink-900 16.6:1, ink-700 11.5:1, ink-500 6.9:1; the lowest anywhere is ink-500 on `ink-100`, 5.3:1. Navy on the white pill is 16.6:1; navy on Signal 9.5:1. Form-control borders use ink-500 (6.9:1, over the 3:1 non-text threshold); ink-300 is for decorative rules only.
 
-### 0.4 The one recorded motion exception
+### 0.4 The recorded motion exceptions
 
-"Apply. Study. Qualify." on PB-01 types, holds, erases and types again, continuously (`src/components/typing-heading.tsx`). It is the only decorative loop in the product, added at the product owner's request on 21 September 2026, and it holds only because of its safeguards, each checked by `tests/motion.test.ts`:
+Two headings type, hold, erase and type again, continuously (`src/components/typing-heading.tsx`), both at the product owner's request:
+
+| Heading | Screen | Added |
+|---|---|---|
+| "Apply. Study. Qualify." | PB-01, the landing page | 21 September 2026 |
+| "Where you can study" (bold, display size) | PB-02, `/programmes` | 22 September 2026 |
+
+They are the only decorative loops in the product. The list is closed: a third needs the same explicit decision, and `tests/motion.test.ts` fails if the component appears anywhere else. Each holds only because of its safeguards, all checked by that test:
 
 - a visible pause button (WCAG 2.2.2: moving content over five seconds must be stoppable);
 - under `prefers-reduced-motion`, it never starts and the full heading stands;

@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * "Apply. Study. Qualify." typed, held, erased and typed again.
+ * A heading typed, held, erased and typed again: "Apply. Study. Qualify."
+ * on PB-01 and "Where you can study" on PB-02, and nowhere else.
  *
- * §9 bans decorative loops; this heading is the one recorded exception
- * (brief §0.4), and it carries the safeguards that make the exception
- * acceptable:
+ * §9 bans decorative loops; the headings this is used for are the recorded
+ * exceptions (brief §0.4), and each carries the safeguards that make the
+ * exception acceptable:
  *
  *  - it stops. WCAG 2.2.2: anything moving for more than five seconds needs
  *    a pause control, so there is one, and it is a real button.
@@ -26,7 +27,16 @@ const ERASE_MS = 35;
 const HOLD_FULL_MS = 2600;
 const HOLD_EMPTY_MS = 450;
 
-export function TypingHeading({ text, className }: { text: string; className?: string }) {
+export function TypingHeading({
+  text,
+  className,
+  as: Tag = 'h2',
+}: {
+  text: string;
+  className?: string;
+  /** The heading level it replaces: a page's h1, or a section's h2. */
+  as?: 'h1' | 'h2';
+}) {
   const [shown, setShown] = useState(text.length);
   const [playing, setPlaying] = useState(false);
   const phase = useRef<'typing' | 'holding' | 'erasing' | 'waiting'>('holding');
@@ -80,7 +90,7 @@ export function TypingHeading({ text, className }: { text: string; className?: s
 
   return (
     <div className="flex items-start justify-between gap-4">
-      <h2 className={className}>
+      <Tag className={className}>
         <span className="sr-only">{text}</span>
         <span aria-hidden="true" className="grid">
           {/* Reserves the full heading's space. Not positioned, so Safari
@@ -93,7 +103,7 @@ export function TypingHeading({ text, className }: { text: string; className?: s
             ) : null}
           </span>
         </span>
-      </h2>
+      </Tag>
       <button
         type="button"
         onClick={toggle}

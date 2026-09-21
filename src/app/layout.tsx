@@ -17,7 +17,8 @@ import { currentInstitution } from '@/lib/tenant';
  */
 const interTight = Inter_Tight({
   subsets: ['latin'],
-  weight: ['400', '600'],
+  // 700 is for the display headings that type (brief §0.4).
+  weight: ['400', '600', '700'],
   variable: '--font-inter-tight',
   display: 'swap',
   preload: true,

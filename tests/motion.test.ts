@@ -119,9 +119,9 @@ describe('reduced motion is handled the way §9 requires', () => {
     expect(hero).toMatch(/Stop the rotating headline/);
   });
 
-  it('lets the one typing loop be stopped, and never starts it with motion reduced', () => {
-    // Brief §0.4: "Apply. Study. Qualify." is the product's single recorded
-    // exception to §9's ban on decorative loops. These are its conditions.
+  it('lets the typing loop be stopped, and never starts it with motion reduced', () => {
+    // Brief §0.4: the typing headings are the product's only recorded
+    // exceptions to §9's ban on decorative loops. These are their conditions.
     const typing = readFileSync(join(SRC, 'components', 'typing-heading.tsx'), 'utf8');
     expect(typing).toContain('(prefers-reduced-motion: reduce)');
     expect(typing).toMatch(/Stop the typing headline/);
@@ -129,11 +129,15 @@ describe('reduced motion is handled the way §9 requires', () => {
     expect(typing).toMatch(/sr-only/);
   });
 
-  it('keeps the typing loop to the one heading it was granted for', () => {
+  it('keeps the typing loop to the headings it was granted for', () => {
+    // Brief §0.4's table, and nowhere else.
     const users = SOURCES.filter(
       (f) => !f.endsWith('typing-heading.tsx') && /TypingHeading/.test(code(f)),
     );
-    expect(users.map((f) => f.replace(SRC, 'src').split('\\').join('/'))).toEqual(['src/app/page.tsx']);
+    expect(users.map((f) => f.replace(SRC, 'src').split('\\').join('/')).sort()).toEqual([
+      'src/app/page.tsx',
+      'src/app/programmes/page.tsx',
+    ]);
   });
 
   it('pairs the payment bar with a live status line', () => {
