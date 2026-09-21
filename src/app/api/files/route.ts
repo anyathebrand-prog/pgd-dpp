@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { readAcrossTenants } from '@/db';
-import { applications, documents } from '@/db/schema';
+import { applications, assessments, assignmentFiles, documents, modules, submissions as submissionsFor } from '@/db/schema';
 import { currentPrincipal } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { getObject, signatureValid } from '@/lib/storage';
@@ -35,6 +35,8 @@ export async function GET(req: Request) {
 
   const me = await currentPrincipal();
   if (!me) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
+
+  if (/^institutions\/[^/]+\/assignments\//.test(key)) return assignmentFile(key, me);
 
   // `documents` is tenant-scoped, but this lookup needs to find the row before
   // it knows the tenant. The object key itself carries the institution id, and
@@ -89,6 +91,63 @@ export async function GET(req: Request) {
       // inline so registry can read it without a download step; nosniff and the
       // CSP below stop a crafted upload being treated as a document to execute.
       'Content-Disposition': `inline; filename="${doc.filename.replace(/"/g, '')}"`,
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-store',
+    },
+  });
+}
+
+/**
+ * ST-07 coursework, under the same three checks. The student who wrote it
+ * can open it, and so can the facilitator who teaches the module, an
+ * institution administrator, and the DPO. Registry cannot: admissions staff
+ * have no reason to read someone's essays.
+ */
+async function assignmentFile(
+  key: string,
+  me: NonNullable<Awaited<ReturnType<typeof currentPrincipal>>>,
+) {
+  const [file] = await readAcrossTenants('signed-document-access', (tx) =>
+    tx
+      .select({ file: assignmentFiles, facilitatorId: modules.facilitatorId })
+      .from(assignmentFiles)
+      .innerJoin(submissionsFor, eq(submissionsFor.id, assignmentFiles.submissionId))
+      .innerJoin(assessments, eq(assessments.id, submissionsFor.assessmentId))
+      .innerJoin(modules, eq(modules.id, assessments.moduleId))
+      .where(eq(assignmentFiles.objectKey, key))
+      .limit(1),
+  );
+  if (!file) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+
+  const owns = file.file.userId === me.userId;
+  const teaches = file.facilitatorId === me.userId;
+  const staffHere = me.allMemberships.some(
+    (m) =>
+      m.institutionId === file.file.institutionId &&
+      ['institution_admin', 'dpo', 'super_admin'].includes(m.role),
+  );
+  if (!owns && !teaches && !staffHere) {
+    return NextResponse.json({ error: 'Not yours to open.' }, { status: 403 });
+  }
+
+  await audit({
+    action: 'assignment.opened',
+    institutionId: file.file.institutionId,
+    actorId: me.userId,
+    actorRole: owns ? 'self' : teaches ? 'facilitator' : 'staff',
+    entity: 'assignment_files',
+    entityId: file.file.id,
+    subjectId: file.file.userId,
+  });
+
+  const body = await getObject(key);
+  return new NextResponse(new Uint8Array(body), {
+    headers: {
+      'Content-Type': file.file.contentType,
+      // attachment, not inline: a .docx has no business rendering in the
+      // browser, and a PDF someone else wrote is safer downloaded.
+      'Content-Disposition': `attachment; filename="${file.file.filename.replace(/[^\w .,()-]/g, '_')}"`,
       'Content-Security-Policy': "default-src 'none'; sandbox",
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'private, no-store',

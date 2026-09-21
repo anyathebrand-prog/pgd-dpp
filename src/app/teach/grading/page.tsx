@@ -4,6 +4,7 @@ import { db, withTenant } from '@/db';
 import {
   assessmentAccommodations,
   assessments,
+  assignmentFiles,
   modules,
   questions,
   submissions,
@@ -12,6 +13,7 @@ import {
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { audit } from '@/lib/audit';
+import { signedUrl } from '@/lib/storage';
 import { ExtraTimePanel, GradePanel } from '@/components/teach-panels';
 import { Banner, DataString, EmptyState, Panel, Record, cx } from '@/components/ui';
 
@@ -84,6 +86,14 @@ export default async function GradingQueue() {
       )
     : [];
 
+  // ST-07: the file each assignment submission points at, for its name.
+  const fileKeys = queue.map((q) => q.submission.fileObjectKey).filter((k): k is string => !!k);
+  const files = fileKeys.length
+    ? await withTenant(institution.id, (tx) =>
+        tx.select().from(assignmentFiles).where(inArray(assignmentFiles.objectKey, fileKeys)),
+      )
+    : [];
+
   // CMP-14: opening a queue of named students' work is staff access to
   // student records, and is logged as such.
   if (queue.length > 0) {
@@ -138,7 +148,10 @@ export default async function GradingQueue() {
               const qs = allQuestions
                 .filter((q) => q.assessmentId === assessment.id)
                 .sort((a, b) => a.position - b.position);
-              const maxScore = qs.reduce((sum, q) => sum + q.marks, 0);
+              const isAssignment = assessment.kind === 'assignment';
+              // An assignment has no questions to sum; it is marked out of 100.
+              const maxScore = isAssignment ? 100 : qs.reduce((sum, q) => sum + q.marks, 0);
+              const file = files.find((f) => f.objectKey === submission.fileObjectKey) ?? null;
               const answers = submission.answers as Record<string, string>;
               const waitingDays = submission.submittedAt
                 ? Math.floor((Date.now() - submission.submittedAt.getTime()) / 86_400_000)
@@ -154,7 +167,7 @@ export default async function GradingQueue() {
                     title={`${nameOf(submission.userId)} — ${assessment.title}`}
                     meta={`${moduleCode} ${moduleTitle} · attempt ${submission.attempt} · submitted ${
                       submission.submittedAt?.toLocaleDateString('en-NG') ?? '—'
-                    }${waitingDays >= 7 ? ` · waiting ${waitingDays} days` : ''}`}
+                    }${submission.late ? ' · late' : ''}${waitingDays >= 7 ? ` · waiting ${waitingDays} days` : ''}`}
                     className={cx(waitingDays >= 7 && 'border-l-[3px] border-l-warning')}
                   >
                     {submission.status === 'returned' ? (
@@ -164,6 +177,31 @@ export default async function GradingQueue() {
                     ) : null}
 
                     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+                      {isAssignment ? (
+                        <div>
+                          {submission.late ? (
+                            <p className="t-body-sm mt-0 mb-3 font-semibold text-warning">
+                              <span aria-hidden="true">▲ </span>
+                              Submitted after the deadline.
+                            </p>
+                          ) : null}
+                          {file ? (
+                            <p className="t-body-sm m-0">
+                              <a
+                                href={signedUrl(file.objectKey)}
+                                className="text-ink-900 underline underline-offset-2"
+                              >
+                                Download {file.filename}
+                              </a>
+                              <span className="t-caption block text-ink-700">
+                                {(file.sizeBytes / 1024).toFixed(0)}KB. The link lasts five minutes.
+                              </span>
+                            </p>
+                          ) : (
+                            <p className="t-body-sm m-0 text-ink-700">No file is attached.</p>
+                          )}
+                        </div>
+                      ) : (
                       <div>
                         <p className="t-caption m-0 mb-3 text-ink-700">
                           Auto-marked so far: {submission.autoScore ?? 0} of{' '}
@@ -194,6 +232,7 @@ export default async function GradingQueue() {
                           })}
                         </ol>
                       </div>
+                      )}
 
                       <div className="space-y-5">
                         <Panel title="Mark it">

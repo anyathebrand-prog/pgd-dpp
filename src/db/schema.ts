@@ -777,6 +777,11 @@ export const submissions = pgTable(
       .default('in_progress'),
     /** FC-03 "return for revision". Shown to the student verbatim. */
     returnedNote: text('returned_note'),
+    /**
+     * ST-07 "late (flagged)". Decided at the moment of submission, so moving
+     * the deadline afterwards cannot rewrite who was late.
+     */
+    late: boolean('late').notNull().default(false),
   },
   (t) => [
     uniqueIndex('submissions_assessment_user_attempt_key').on(t.assessmentId, t.userId, t.attempt),
@@ -818,6 +823,35 @@ export const assessmentAccommodations = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('accommodations_assessment_user_key').on(t.assessmentId, t.userId)],
+);
+
+/**
+ * ST-07 submission history. Every file a student attaches to an assignment,
+ * submitted or not. Originals are immutable (§7.6): a replacement is a new
+ * object and a new row, and `submissions.file_object_key` names the one that
+ * counts.
+ */
+export const assignmentFiles = pgTable(
+  'assignment_files',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    submissionId: uuid('submission_id')
+      .notNull()
+      .references(() => submissions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    objectKey: text('object_key').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('assignment_files_object_key_key').on(t.objectKey)],
 );
 
 export const grades = pgTable('grades', {

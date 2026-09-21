@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { and, desc, eq } from 'drizzle-orm';
 import { withTenant } from '@/db';
 import { assessments, questions, submissions } from '@/db/schema';
@@ -33,6 +33,9 @@ export default async function AssessmentPage({
     tx.select().from(assessments).where(eq(assessments.id, id)).limit(1),
   );
   if (!assessment || !assessment.published) notFound();
+  // ST-07: a file-upload assignment has its own screen, so every existing
+  // link to an assessment lands in the right place.
+  if (assessment.kind === 'assignment') redirect(`/assignment/${id}`);
 
   const qs = await withTenant(institution.id, (tx) =>
     tx.select({ marks: questions.marks }).from(questions).where(eq(questions.assessmentId, id)),
