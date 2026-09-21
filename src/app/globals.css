@@ -300,6 +300,15 @@ body {
 .motion-redaction {
   position: relative;
   white-space: nowrap;
+  /*
+   * Its own fill, not the heading's. The H1's gradient is painted with
+   * background-clip: text, and Safari and iOS do not paint a parent's
+   * clipped background into a positioned child — so the transparent fill it
+   * inherits left "Data Protection" invisible there. A solid accent is
+   * legible everywhere (11.4:1 on the surface) and marks the phrase.
+   */
+  -webkit-text-fill-color: #b6d2f9;
+  color: #b6d2f9;
 }
 
 .motion-redaction::after {
