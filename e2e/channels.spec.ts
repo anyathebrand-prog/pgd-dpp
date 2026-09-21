@@ -14,17 +14,17 @@ import postgres from 'postgres';
 import 'dotenv/config';
 
 const UNILAG_ALUM = join(process.cwd(), '.auth', 'channel-unilag.json');
-const UNN_ALUM = join(process.cwd(), '.auth', 'channel-unn.json');
+const FUL_ALUM = join(process.cwd(), '.auth', 'channel-ful.json');
 const ADMIN = join(process.cwd(), '.auth', 'channel-admin.json');
 const PASSWORD = 'Passw0rd-seed-2026';
 const RUN = Date.now();
 
 const unilagAlum = `chan-unilag-${RUN}@example.ng`;
-const unnAlum = `chan-unn-${RUN}@example.ng`;
+const fulAlum = `chan-ful-${RUN}@example.ng`;
 const POST = `Enforcement notice worth reading ${RUN}`;
 
 let unilagId = '';
-let unnId = '';
+let fulId = '';
 let postId = '';
 
 function sql() {
@@ -69,15 +69,15 @@ test.beforeAll(async ({ browser, baseURL }) => {
 
   const db = sql();
   unilagId = (await db`SELECT id FROM institutions WHERE slug = 'unilag'`)[0].id;
-  unnId = (await db`SELECT id FROM institutions WHERE slug = 'unn'`)[0].id;
+  fulId = (await db`SELECT id FROM institutions WHERE slug = 'fulokoja'`)[0].id;
   await makeAlumnus(db, unilagAlum, unilagId);
-  await makeAlumnus(db, unnAlum, unnId);
+  await makeAlumnus(db, fulAlum, fulId);
   await db`UPDATE users SET totp_secret = NULL, totp_confirmed_at = NULL WHERE email = 'admin@unilag.example.ng'`;
   await db.end();
 
   for (const [email, state] of [
     [unilagAlum, UNILAG_ALUM],
-    [unnAlum, UNN_ALUM],
+    [fulAlum, FUL_ALUM],
   ] as const) {
     const context = await browser.newContext({ baseURL, storageState: undefined });
     const page = await context.newPage();
@@ -115,7 +115,7 @@ test.beforeAll(async ({ browser, baseURL }) => {
 
 test.afterAll(async () => {
   const db = sql();
-  const ids = await db`SELECT id FROM users WHERE email IN (${unilagAlum}, ${unnAlum})`;
+  const ids = await db`SELECT id FROM users WHERE email IN (${unilagAlum}, ${fulAlum})`;
   const list = ids.map((r) => r.id);
   if (list.length) {
     await db`DELETE FROM content_reports WHERE reporter_id = ANY(${list})`;
@@ -156,7 +156,7 @@ test.describe('a school channel is private to that school', () => {
     baseURL,
   }) => {
     // ALM-12, tested the only way that means anything: by typing the URL.
-    const context = await browser.newContext({ baseURL, storageState: UNN_ALUM });
+    const context = await browser.newContext({ baseURL, storageState: FUL_ALUM });
     const page = await context.newPage();
 
     const response = await page.goto(`/alumni/school/${unilagId}`);
@@ -170,7 +170,7 @@ test.describe('a school channel is private to that school', () => {
     // The page refusing to render is not the control; the action refusing to
     // write is. A 404 that still accepted writes would be a leak with a
     // polite front door.
-    const context = await browser.newContext({ baseURL, storageState: UNN_ALUM });
+    const context = await browser.newContext({ baseURL, storageState: FUL_ALUM });
     const page = await context.newPage();
     await page.goto('/alumni');
 
@@ -204,15 +204,15 @@ test.describe('a school channel is private to that school', () => {
     // The other half of ALM-12: the wall is around the channel, not around
     // the network.
     const db = sql();
-    await db`UPDATE alumni_profiles SET directory_visible = true WHERE user_id IN (SELECT id FROM users WHERE email IN (${unilagAlum}, ${unnAlum}))`;
+    await db`UPDATE alumni_profiles SET directory_visible = true WHERE user_id IN (SELECT id FROM users WHERE email IN (${unilagAlum}, ${fulAlum}))`;
     await db.end();
 
-    const context = await browser.newContext({ baseURL, storageState: UNN_ALUM });
+    const context = await browser.newContext({ baseURL, storageState: FUL_ALUM });
     const page = await context.newPage();
     await page.goto('/alumni/directory');
 
     await expect(page.getByText('You are listed')).toBeVisible();
-    // A UNILAG graduate, seen by a UNN one.
+    // A UNILAG graduate, seen by a FUL one.
     await expect(page.getByText(`Alum ${unilagAlum.slice(0, 12)}`)).toBeVisible();
     await context.close();
   });
@@ -312,9 +312,9 @@ test.describe('moderation is the institution’s own', () => {
     // ALM-11's "own alumni only" needs no send-time filter: the broadcast is
     // a row in this institution's channel, and there is nowhere else for it
     // to go.
-    const theirs = await browser.newContext({ baseURL, storageState: UNN_ALUM });
+    const theirs = await browser.newContext({ baseURL, storageState: FUL_ALUM });
     const theirsPage = await theirs.newPage();
-    await theirsPage.goto(`/alumni/school/${unnId}`);
+    await theirsPage.goto(`/alumni/school/${fulId}`);
     await expect(theirsPage.getByText(subject)).toHaveCount(0);
     await theirs.close();
   });

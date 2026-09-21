@@ -78,7 +78,7 @@ test.describe('the course list', () => {
   });
 
   test('a facilitator sees only their own institution', async ({ page }) => {
-    // The UNN facilitator's modules belong to UNN. RLS makes this a matter of
+    // The FUL facilitator's modules belong to FUL. RLS makes this a matter of
     // the database returning nothing, not of the UI filtering.
     await page.goto('/teach');
     // The module, specifically: the console also lists announcements, which

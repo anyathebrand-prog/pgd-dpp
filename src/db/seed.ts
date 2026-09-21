@@ -184,15 +184,15 @@ async function main() {
         status: 'live',
       },
       {
-        slug: 'unn',
-        name: 'University of Nigeria, Nsukka',
-        shortName: 'UNN',
-        city: 'Nsukka',
+        slug: 'fulokoja',
+        name: 'Federal University Lokoja',
+        shortName: 'FUL',
+        city: 'Lokoja',
         brandColour: '#0E5C3A',
-        paystackSubaccountCode: 'ACCT_seed_unn',
+        paystackSubaccountCode: 'ACCT_seed_fulokoja',
         paystackSharePercent: 88,
         bankName: 'Zenith Bank',
-        bankAccountName: 'University of Nigeria Nsukka — PGD DPP',
+        bankAccountName: 'Federal University Lokoja — PGD DPP',
         bankAccountNumber: '1229930041',
         offerExpiryDays: 21,
         status: 'live',
@@ -200,7 +200,7 @@ async function main() {
     ])
     .returning();
 
-  const [unilag, unn] = institutions;
+  const [unilag, ful] = institutions;
 
   for (const inst of institutions) {
     const [programme] = await db
@@ -422,8 +422,8 @@ async function main() {
   const staff = [
     { email: 'registry@unilag.example.ng', name: 'Adaeze Okonkwo', inst: unilag, role: 'registry' as const },
     { email: 'admin@unilag.example.ng', name: 'Tunde Bakare', inst: unilag, role: 'institution_admin' as const },
-    { email: 'registry@unn.example.ng', name: 'Ifeoma Eze', inst: unn, role: 'registry' as const },
-    { email: 'admin@unn.example.ng', name: 'Chukwuma Nwosu', inst: unn, role: 'institution_admin' as const },
+    { email: 'registry@fulokoja.example.ng', name: 'Ojone Adejoh', inst: ful, role: 'registry' as const },
+    { email: 'admin@fulokoja.example.ng', name: 'Abdullahi Salihu', inst: ful, role: 'institution_admin' as const },
   ];
 
   for (const member of staff) {
@@ -613,7 +613,7 @@ async function main() {
   console.log('');
   console.log('Seeded two tenants.');
   console.log('  http://unilag.localhost:3000   University of Lagos');
-  console.log('  http://unn.localhost:3000      University of Nigeria, Nsukka');
+  console.log('  http://fulokoja.localhost:3000      Federal University Lokoja');
   console.log('  http://localhost:3000          platform landing');
   console.log('');
   console.log(`Every seeded account uses the password: ${PASSWORD}`);
@@ -626,7 +626,7 @@ async function main() {
   console.log('  curator@example.ng            library curator at http://app.localhost:3000/curate');
   console.log('  platform@example.ng           super admin at http://app.localhost:3000/platform/tenants');
   console.log('');
-  console.log('The UNN accounts mirror these. Try reading a UNILAG record while signed in as UNN.');
+  console.log('The FUL accounts mirror these. Try reading a UNILAG record while signed in as FUL.');
 
   await sql.end();
 }

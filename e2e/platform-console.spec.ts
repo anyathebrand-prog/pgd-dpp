@@ -124,7 +124,7 @@ test.describe('SA-02 — platform analytics', () => {
     const db = sql();
     const people = await db`
       SELECT email, full_name FROM users
-      WHERE email LIKE '%@unilag.example.ng' OR email LIKE '%@unn.example.ng'`;
+      WHERE email LIKE '%@unilag.example.ng' OR email LIKE '%@fulokoja.example.ng'`;
     await db.end();
 
     for (const person of people) {

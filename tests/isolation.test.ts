@@ -21,16 +21,16 @@ const app = postgres(appUrl, { max: 2, onnotice: () => {} });
 const owner = postgres(ownerUrl, { max: 2, onnotice: () => {} });
 
 let unilag: string;
-let unn: string;
+let ful: string;
 
 beforeAll(async () => {
   const rows = await owner<{ id: string; slug: string }[]>`
     SELECT id, slug FROM institutions ORDER BY slug
   `;
   unilag = rows.find((r) => r.slug === 'unilag')!.id;
-  unn = rows.find((r) => r.slug === 'unn')!.id;
+  ful = rows.find((r) => r.slug === 'fulokoja')!.id;
   expect(unilag, 'seed data is missing — run npm run db:reset').toBeTruthy();
-  expect(unn).toBeTruthy();
+  expect(ful).toBeTruthy();
 });
 
 afterAll(async () => {
@@ -134,18 +134,18 @@ describe('School A cannot read School B', () => {
     // id the attacker already knows.
     const rows = await asTenant(
       unilag,
-      (tx) => tx`SELECT * FROM applications WHERE institution_id = ${unn}`,
+      (tx) => tx`SELECT * FROM applications WHERE institution_id = ${ful}`,
     );
     expect(rows).toHaveLength(0);
   });
 
   it('returns nothing for an unfiltered count of the other tenant documents', async () => {
-    const unnDocs = await asTenant(unn, (tx) => tx`SELECT count(*)::int AS n FROM fee_items`);
+    const fulDocs = await asTenant(ful, (tx) => tx`SELECT count(*)::int AS n FROM fee_items`);
     const seenFromUnilag = await asTenant(
       unilag,
-      (tx) => tx`SELECT count(*)::int AS n FROM fee_items WHERE institution_id = ${unn}`,
+      (tx) => tx`SELECT count(*)::int AS n FROM fee_items WHERE institution_id = ${ful}`,
     );
-    expect(Number(unnDocs[0].n)).toBeGreaterThan(0);
+    expect(Number(fulDocs[0].n)).toBeGreaterThan(0);
     expect(Number(seenFromUnilag[0].n)).toBe(0);
   });
 
@@ -158,7 +158,7 @@ describe('School A cannot read School B', () => {
       (tx) => tx`
         SELECT a.id FROM users u
         JOIN applications a ON a.user_id = u.id
-        WHERE a.institution_id = ${unn}
+        WHERE a.institution_id = ${ful}
       `,
     );
     expect(rows).toHaveLength(0);
@@ -179,7 +179,7 @@ describe('School A cannot write into School B', () => {
         unilag,
         (tx) => tx`
           INSERT INTO fee_items (institution_id, kind, label, amount_kobo)
-          VALUES (${unn}, 'application', 'Injected by a test', 1)
+          VALUES (${ful}, 'application', 'Injected by a test', 1)
         `,
       ),
     ).rejects.toThrow(/row-level security/i);
@@ -187,27 +187,27 @@ describe('School A cannot write into School B', () => {
 
   it('cannot update another tenant rows', async () => {
     const before = await asTenant(
-      unn,
+      ful,
       (tx) => tx`SELECT capacity FROM cohorts LIMIT 1`,
     );
     const result = await asTenant(
       unilag,
-      (tx) => tx`UPDATE cohorts SET capacity = 9999 WHERE institution_id = ${unn} RETURNING id`,
+      (tx) => tx`UPDATE cohorts SET capacity = 9999 WHERE institution_id = ${ful} RETURNING id`,
     );
     expect(result).toHaveLength(0);
 
-    const after = await asTenant(unn, (tx) => tx`SELECT capacity FROM cohorts LIMIT 1`);
+    const after = await asTenant(ful, (tx) => tx`SELECT capacity FROM cohorts LIMIT 1`);
     expect(after[0].capacity).toBe(before[0].capacity);
   });
 
   it('cannot delete another tenant rows', async () => {
     const result = await asTenant(
       unilag,
-      (tx) => tx`DELETE FROM applications WHERE institution_id = ${unn} RETURNING id`,
+      (tx) => tx`DELETE FROM applications WHERE institution_id = ${ful} RETURNING id`,
     );
     expect(result).toHaveLength(0);
 
-    const stillThere = await asTenant(unn, (tx) => tx`SELECT count(*)::int AS n FROM applications`);
+    const stillThere = await asTenant(ful, (tx) => tx`SELECT count(*)::int AS n FROM applications`);
     expect(Number(stillThere[0].n)).toBeGreaterThan(0);
   });
 
@@ -216,7 +216,7 @@ describe('School A cannot write into School B', () => {
     // tenant it belongs to — a leak that reads as a legitimate write.
     const result = await asTenant(
       unilag,
-      (tx) => tx`UPDATE fee_items SET institution_id = ${unn} RETURNING id`,
+      (tx) => tx`UPDATE fee_items SET institution_id = ${ful} RETURNING id`,
     ).catch((e: Error) => e);
     if (result instanceof Error) {
       expect(result.message).toMatch(/row-level security/i);

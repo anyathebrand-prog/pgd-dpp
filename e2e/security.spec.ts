@@ -218,7 +218,7 @@ test.describe('#4 — a university portal can only vouch for its own students', 
   }) => {
     const context = await browser.newContext({ storageState: undefined });
     const page = await context.newPage();
-    await page.goto(`${baseURL}/sso/handoff?token=${handoffFor('student@unn.example.ng')}`);
+    await page.goto(`${baseURL}/sso/handoff?token=${handoffFor('student@fulokoja.example.ng')}`);
 
     await expect(page).toHaveURL(/\/sso\/handoff\/failed/);
     expect((await context.cookies()).some((c) => c.name === 'pgd_session')).toBe(false);

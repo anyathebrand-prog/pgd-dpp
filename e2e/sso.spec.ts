@@ -159,10 +159,10 @@ test.describe('a student is handed over from their university portal', () => {
     browser,
     baseURL,
   }) => {
-    // UNN has no secret. A token that is valid for UNILAG must not be valid
+    // FUL has no secret. A token that is valid for UNILAG must not be valid
     // there, and "not configured" must not degrade into "accepted".
     const context = await browser.newContext({
-      baseURL: baseURL?.replace('//unilag.', '//unn.'),
+      baseURL: baseURL?.replace('//unilag.', '//fulokoja.'),
       storageState: undefined,
     });
     const page = await context.newPage();
