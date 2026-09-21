@@ -517,6 +517,72 @@ export const transactions = pgTable(
   ],
 );
 
+/**
+ * PAY-12 — a refund, from the request to the money leaving.
+ *
+ * Tenant-scoped like the transaction it hangs off: a refund is an
+ * institution's decision about its own money, and one university has no
+ * business reading another's.
+ *
+ * The request and the decision are recorded by different people, and the
+ * schema says so with two columns rather than one "actor": the approval chain
+ * PAY-12 asks for is exactly that the person in `requested_by` is never the
+ * person in `decided_by`. `status` moves requested → approved → processed, or
+ * requested → rejected, or approved → failed when Paystack refuses; nothing
+ * moves backwards, so the row is its own history.
+ */
+export const refunds = pgTable(
+  'refunds',
+  {
+    id: id(),
+    institutionId: uuid('institution_id')
+      .notNull()
+      .references(() => institutions.id, { onDelete: 'cascade' }),
+    transactionId: uuid('transaction_id')
+      .notNull()
+      .references(() => transactions.id, { onDelete: 'restrict' }),
+    amountKobo: integer('amount_kobo').notNull(),
+    reason: text('reason', {
+      enum: ['duplicate_payment', 'overpayment', 'withdrawal', 'cohort_cancelled'],
+    }).notNull(),
+    note: text('note').notNull(),
+    /*
+     * How the money goes back, and it is not a detail.
+     *
+     * `paystack` reverses the card charge. `manual_transfer` is the
+     * institution paying it back from its own bank account and recording the
+     * reference. The double-payment case needs the second: there is one
+     * transaction row, settled by the card, and the duplicate money is the
+     * sponsor's bank transfer, which never touched Paystack. Refunding that
+     * through Paystack would reverse the card payment — the one that counted —
+     * leaving the student marked unpaid and the transfer still held.
+     */
+    method: text('method', { enum: ['paystack', 'manual_transfer'] }).notNull(),
+    /** For a manual transfer: the bank's reference, entered by the approver. */
+    bankReference: text('bank_reference'),
+    status: text('status', {
+      enum: ['requested', 'approved', 'rejected', 'processed', 'failed'],
+    })
+      .notNull()
+      .default('requested'),
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'restrict' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decisionNote: text('decision_note'),
+    /** Paystack's id for the refund, once it has one. */
+    paystackRefundId: text('paystack_refund_id'),
+    failureReason: text('failure_reason'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('refunds_institution_status_idx').on(t.institutionId, t.status),
+    index('refunds_transaction_idx').on(t.transactionId),
+  ],
+);
+
 export const transactionLines = pgTable('transaction_lines', {
   id: id(),
   institutionId: uuid('institution_id')

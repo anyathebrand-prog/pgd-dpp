@@ -314,6 +314,17 @@ export default async function OfflineApprovals({
                         </dd>
                       </div>
                     </dl>
+                    <p className="t-body-sm mt-4 mb-0">
+                      {/* PAY-12. The request form defaults to returning the
+                          transfer, since the card payment is the one that
+                          counted. */}
+                      <Link
+                        href={`/admin/refunds?ref=${encodeURIComponent(txn.reference)}`}
+                        className="text-ink-900 underline underline-offset-2"
+                      >
+                        Request a refund of the transfer
+                      </Link>
+                    </p>
                   </Record>
                 </li>
               );

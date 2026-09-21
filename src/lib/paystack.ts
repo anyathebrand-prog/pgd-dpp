@@ -213,3 +213,47 @@ export async function createSubaccount(params: {
   }
   return { ok: true, code: body.data.subaccount_code };
 }
+
+/**
+ * PAY-12 — asking Paystack to return money to the card or account it came
+ * from.
+ *
+ * Called only after a second person has approved the refund. Paystack pays the
+ * refund out of the settlement balance, so a refund on a split transaction
+ * comes back proportionally from the institution's share and the platform's —
+ * which is the arrangement the institutional agreement assumes, and the reason
+ * this goes through Paystack rather than as a separate bank transfer that
+ * would leave the platform's commission kept on money that was returned.
+ */
+export async function createRefund(params: {
+  reference: string;
+  amountKobo: number;
+  note: string;
+}): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  if (isSimulated()) {
+    return { ok: true, id: `RF_sim_${humanCode(10).toLowerCase()}` };
+  }
+
+  const res = await fetch(`${BASE}/refund`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      transaction: params.reference,
+      amount: params.amountKobo,
+      merchant_note: params.note.slice(0, 200),
+    }),
+  });
+  const body = (await res.json()) as {
+    status?: boolean;
+    message?: string;
+    data?: { id?: number | string };
+  };
+
+  if (!res.ok || !body.status || body.data?.id == null) {
+    return { ok: false, reason: body.message ?? 'Paystack refused the refund.' };
+  }
+  return { ok: true, id: String(body.data.id) };
+}
