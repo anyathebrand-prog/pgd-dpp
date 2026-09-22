@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { institutions } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { FLAGS, FLAG_KEYS, flagEnabled, flagState, type FlagKey } from '@/lib/flags';
-import { Banner, Panel, Record, StaffBand, cx } from '@/components/ui';
+import { Banner, Panel, Record, cx } from '@/components/ui';
 import { InstitutionFlag, PlatformSwitch } from '@/components/flag-panels';
 
 /**
@@ -55,7 +55,6 @@ export default async function Flags({
 
   return (
     <div>
-      <StaffBand institution="Platform" role="Super admin" />
       <main id="main" className="mx-auto max-w-[1120px] px-4 py-10 md:px-8">
         <h1 className="t-h1 m-0 text-ink-900">Feature flags</h1>
         <p className="t-body measure mt-3 text-ink-700">

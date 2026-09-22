@@ -119,3 +119,31 @@ export function checkBrandColour(input: string): BrandCheck {
       `Anyone reading your institution name at a glance, on a phone, in daylight, would struggle with it.`,
   };
 }
+
+/** The navy page surface of the 2026 redesign (brief §0). */
+export const SURFACE = '#08163C';
+/** WCAG 1.4.11: a graphic that is not text needs 3:1 against what is behind it. */
+export const MIN_GRAPHIC_RATIO = 3;
+
+/**
+ * A university's brand colour as it is drawn on the navy surface.
+ *
+ * Brand colours are validated against Paper (§2.5), so they are dark by
+ * construction, and a dark oxblood or green all but disappears on navy
+ * (brief §0.3). This lifts the colour toward white, along its own hue,
+ * just far enough to reach 3:1: UNILAG stays recognisably oxblood, a lighter
+ * oxblood. The stored brand colour is never changed; this is how it is
+ * shown, not what it is.
+ */
+export function brandOnSurface(hex: string, against = SURFACE): string {
+  const start = normaliseHex(hex);
+  if (!start) return '#F8F8F8';
+  if (contrastRatio(start, against) >= MIN_GRAPHIC_RATIO) return start;
+  const [r, g, b] = toRgb(start);
+  for (let step = 1; step <= 100; step++) {
+    const t = step / 100;
+    const candidate = toHex([r + (255 - r) * t, g + (255 - g) * t, b + (255 - b) * t]);
+    if (contrastRatio(candidate, against) >= MIN_GRAPHIC_RATIO) return candidate;
+  }
+  return '#FFFFFF';
+}

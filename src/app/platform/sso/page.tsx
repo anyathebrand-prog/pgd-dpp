@@ -4,7 +4,7 @@ import { institutions } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { tenantUrl } from '@/lib/tenant';
 import { ActionForm } from '@/components/form';
-import { Banner, DataString, Field, Input, Record, StaffBand } from '@/components/ui';
+import { Banner, DataString, Field, Input, Record } from '@/components/ui';
 import { disableOidc, saveOidcSettings } from '@/modules/admin/sso-settings';
 
 /**
@@ -27,7 +27,6 @@ export default async function SsoSettings({
 
   return (
     <div>
-      <StaffBand institution="Platform" role="Super admin" />
       <main id="main" className="mx-auto max-w-[1120px] px-4 py-10 md:px-8">
         <h1 className="t-h1 m-0 text-ink-900">University sign-in</h1>
         <p className="t-body measure mt-3 text-ink-700">

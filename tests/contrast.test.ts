@@ -121,3 +121,31 @@ describe('the branding gate blocks rather than warns', () => {
     }
   });
 });
+
+describe('the brand colour on the navy surface (brief §0.3)', () => {
+  it('lifts a dark brand colour until it reaches 3:1 against navy', async () => {
+    const { brandOnSurface, contrastRatio, SURFACE } = await import('@/lib/contrast');
+    for (const hex of ['#6B2436', '#0E5C3A', '#1B3A6B']) {
+      const shown = brandOnSurface(hex);
+      expect(contrastRatio(shown, SURFACE)).toBeGreaterThanOrEqual(3);
+      // Only as far as needed: one step less would not pass.
+      expect(contrastRatio(hex, SURFACE)).toBeLessThan(3);
+    }
+  });
+
+  it('keeps the hue: an oxblood stays red-dominant, a green stays green-dominant', async () => {
+    const { brandOnSurface } = await import('@/lib/contrast');
+    const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const [r1, g1, b1] = rgb(brandOnSurface('#6B2436'));
+    expect(r1).toBeGreaterThan(g1);
+    expect(r1).toBeGreaterThan(b1);
+    const [r2, g2, b2] = rgb(brandOnSurface('#0E5C3A'));
+    expect(g2).toBeGreaterThan(r2);
+    expect(g2).toBeGreaterThan(b2);
+  });
+
+  it('leaves a colour that already shows unchanged', async () => {
+    const { brandOnSurface } = await import('@/lib/contrast');
+    expect(brandOnSurface('#F5C16C')).toBe('#F5C16C');
+  });
+});

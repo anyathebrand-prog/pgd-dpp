@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Inter_Tight, Literata } from 'next/font/google';
 import './globals.css';
 import { currentInstitution } from '@/lib/tenant';
+import { brandOnSurface } from '@/lib/contrast';
 
 /**
  * §3.5 font loading is a real constraint, not a preference. The budget is
@@ -67,7 +68,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       // so a registry officer moving between institutions never has to relearn
       // what a colour means, and contrast compliance does not depend on a
       // university administrator's colour taste.
-      style={institution ? ({ ['--tenant-brand' as string]: institution.brandColour }) : undefined}
+      // Drawn lifted toward white just enough to show on the navy surface
+      // (brief §0.3); the stored colour is untouched.
+      style={
+        institution
+          ? ({ ['--tenant-brand' as string]: brandOnSurface(institution.brandColour) })
+          : undefined
+      }
     >
       <body>
         <a

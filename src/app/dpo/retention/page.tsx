@@ -26,7 +26,7 @@ export default async function RetentionReport() {
 
   return (
     <div className="min-h-screen">
-      <StaffBand institution="Platform — Data Protection Officer" role={me.roles.join(', ')} />
+      <StaffBand institution="Platform" role="dpo" />
 
       <main id="main" className="mx-auto max-w-[1600px] px-8 py-8">
         <p className="t-body-sm m-0">

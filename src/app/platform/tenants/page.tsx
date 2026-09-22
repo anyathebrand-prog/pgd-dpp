@@ -3,7 +3,7 @@ import { asc, count, eq } from 'drizzle-orm';
 import { db, withTenant } from '@/db';
 import { applications, institutions, memberships, users } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
-import { Banner, DataString, EmptyState, Panel, Record, StaffBand, cx } from '@/components/ui';
+import { Banner, DataString, EmptyState, Panel, Record, cx } from '@/components/ui';
 import { ProvisionForm, TenantStatus } from '@/components/tenant-panels';
 
 /**
@@ -59,7 +59,6 @@ export default async function Tenants({
 
   return (
     <div>
-      <StaffBand institution="Platform" role="Super admin" />
       <main id="main" className="mx-auto max-w-[1120px] px-4 py-10 md:px-8">
         <h1 className="t-h1 m-0 text-ink-900">Institutions</h1>
         <p className="t-body measure mt-3 text-ink-700">

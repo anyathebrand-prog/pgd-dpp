@@ -62,9 +62,9 @@ They are the only decorative loops in the product. The list is closed: a third n
 
 Everything else in §9 stands, on PB-01 as everywhere: no scroll-triggered entrances, no hover lift or scale, no parallax, shimmer or spinners.
 
-### 0.3 Open item
+### 0.3 The tenant brand colour on navy (resolved 22 September 2026)
 
-The tenant brand colour (§2.5) is still validated against Paper, so a dark university colour such as Oxblood is barely visible as the mark beside the institution name on navy. Either validate it against the navy surface or render the mark on a light chip.
+The tenant brand colour (§2.5) is validated against Paper, so it is dark by construction and a colour such as Oxblood all but disappeared on navy. It is now *drawn* through `brandOnSurface()` (`src/lib/contrast.ts`): lifted toward white along its own hue just far enough to reach 3:1 against the surface (WCAG 1.4.11, non-text), and left alone if it already does. The stored colour, and the administrator's validation against Paper, are unchanged. It applies wherever `--tenant-brand` is drawn: the header mark, the sign-in header, the admission letter, receipts and certificates.
 
 ---
 

@@ -50,7 +50,7 @@ export default async function EvidenceExport({
 
   return (
     <div>
-      <StaffBand institution="Platform" role="Data Protection Officer" />
+      <StaffBand institution="Platform" role="dpo" />
       <main id="main" className="mx-auto max-w-[1120px] px-4 py-10 md:px-8">
         <h1 className="t-h1 m-0 text-ink-900">Compliance evidence export</h1>
         <p className="t-body measure mt-3 text-ink-700">

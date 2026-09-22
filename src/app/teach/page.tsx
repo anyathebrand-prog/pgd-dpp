@@ -90,7 +90,7 @@ export default async function MyModules() {
 
       {totalWaiting > 0 ? (
         <div className="mb-6">
-          <Banner tone="warning" title={`${totalWaiting} submissions are waiting to be marked`}>
+          <Banner tone="warning" title={`${totalWaiting} ${totalWaiting === 1 ? 'submission is' : 'submissions are'} waiting to be marked`}>
             <p>
               Nobody can see their result until you have looked at it.{' '}
               <Link href="/teach/grading" className="text-ink-900 underline underline-offset-2">

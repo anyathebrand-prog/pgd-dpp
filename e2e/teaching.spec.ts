@@ -74,7 +74,7 @@ test.describe('the course list', () => {
 
     await expect(page.getByText('DPP-101 · The NDPA 2023 in practice')).toBeVisible();
     // The seed leaves one short-answer attempt unmarked.
-    await expect(page.getByText(/submissions are waiting to be marked/i)).toBeVisible();
+    await expect(page.getByText(/(submission is|submissions are) waiting to be marked/i)).toBeVisible();
   });
 
   test('a facilitator sees only their own institution', async ({ page }) => {

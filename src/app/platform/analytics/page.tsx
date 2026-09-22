@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireRole } from '@/lib/auth';
-import { Banner, EmptyState, Panel, StaffBand, cx } from '@/components/ui';
+import { Banner, EmptyState, Panel, cx } from '@/components/ui';
 import {
   funnel,
   loginMethods,
@@ -41,7 +41,6 @@ export default async function Analytics() {
 
   return (
     <div>
-      <StaffBand institution="Platform" role="Super admin" />
       <main id="main" className="mx-auto max-w-[1120px] px-4 py-10 md:px-8">
         <h1 className="t-h1 m-0 text-ink-900">Platform analytics</h1>
         <p className="t-body measure mt-3 text-ink-700">

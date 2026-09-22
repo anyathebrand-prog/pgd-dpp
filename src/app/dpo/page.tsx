@@ -74,7 +74,7 @@ export default async function DpoConsole() {
 
   return (
     <div className="min-h-screen">
-      <StaffBand institution="Platform — Data Protection Officer" role={me.roles.join(', ')} />
+      <StaffBand institution="Platform" role="dpo" />
 
       <main id="main" className="mx-auto max-w-[1600px] px-8 py-8">
         <h1 className="t-h1 m-0 text-ink-900">Data protection</h1>

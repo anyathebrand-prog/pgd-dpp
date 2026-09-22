@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { requireRole } from '@/lib/auth';
+import { StaffBand } from '@/components/ui';
 
 /**
  * The platform console's chrome (§5.9).
@@ -24,8 +25,9 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-screen">
+      <StaffBand institution="Platform" role="super_admin" />
       <nav aria-label="Platform console" className="border-b border-ink-300">
-        <div className="mx-auto flex max-w-[1120px] flex-wrap gap-6 px-4 py-3 md:px-8">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap gap-6 px-8 py-3">
           {nav.map((n) => (
             <Link
               key={n.href}

@@ -76,7 +76,7 @@ export default async function Consents({
 
   return (
     <div className="min-h-screen">
-      <StaffBand institution="Platform, Data Protection Officer" role={me.roles.join(', ')} />
+      <StaffBand institution="Platform" role="dpo" />
       <main id="main" className="mx-auto max-w-[1600px] px-8 py-8">
         <p className="t-caption m-0">
           <Link href="/dpo" className="text-ink-700 underline underline-offset-2">

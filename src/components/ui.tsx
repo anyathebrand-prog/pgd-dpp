@@ -426,13 +426,36 @@ export function StatusStepper({
  * dismissible. It is the ambient signal that you are operating on other
  * people's data, and the logging notice inside it is chrome, not a banner.
  */
+const ROLE_NAMES: Record<string, string> = {
+  institution_admin: 'Institution admin',
+  registry: 'Registry officer',
+  facilitator: 'Facilitator',
+  dpo: 'Data Protection Officer',
+  super_admin: 'Super admin',
+  curator: 'Library curator',
+  candidate: 'Applicant',
+  student: 'Student',
+  alumni: 'Alumnus',
+};
+
+/** "institution_admin, registry" -> "Institution admin, Registry officer". */
+function roleNames(role: string) {
+  return role
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .map((r) => ROLE_NAMES[r] ?? r)
+    .join(', ');
+}
+
 export function StaffBand({ institution, role }: { institution: string; role: string }) {
+  const named = roleNames(role);
   return (
     <div className="glow-band text-ink-900">
       <div className="mx-auto flex h-14 max-w-[1600px] flex-wrap items-center justify-between gap-2 px-8">
         <span className="t-label">{institution}</span>
         <span className="t-caption text-ink-900/85">
-          {role} · All access to applicant records is logged.
+          {named ? `${named} · ` : ''}All access to applicant records is logged.
         </span>
       </div>
     </div>
