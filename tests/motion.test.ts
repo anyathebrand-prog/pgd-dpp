@@ -140,6 +140,21 @@ describe('reduced motion is handled the way §9 requires', () => {
     ]);
   });
 
+  it('lets the looping mail illustration be paused, and holds it still with motion reduced', () => {
+    // Brief §0.4's third recorded loop. An animated image cannot pause in
+    // place, so the component swaps to the still frame.
+    const mail = readFileSync(join(SRC, 'components', 'mail-illustration.tsx'), 'utf8');
+    expect(mail).toContain('(prefers-reduced-motion: reduce)');
+    expect(mail).toMatch(/Pause the animation/);
+    expect(mail).toContain('mail-sent-still.webp');
+    const users = SOURCES.filter(
+      (f) => !f.endsWith('mail-illustration.tsx') && /MailIllustration/.test(code(f)),
+    );
+    expect(users.map((f) => f.replace(SRC, 'src').split('\\').join('/'))).toEqual([
+      'src/app/(auth)/signup/verify/page.tsx',
+    ]);
+  });
+
   it('pairs the payment bar with a live status line', () => {
     // §9: "the PY-02 payment bar becomes a static bar plus a text status line
     // that updates via aria-live".

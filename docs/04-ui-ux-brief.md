@@ -45,12 +45,13 @@ Commissioned as a whole-platform redesign after flowninja.com. It changes how th
 
 ### 0.4 The recorded motion exceptions
 
-Two headings type, hold, erase and type again, continuously (`src/components/typing-heading.tsx`), both at the product owner's request:
+Three things loop continuously, all at the product owner's request: two headings that type, hold, erase and type again (`src/components/typing-heading.tsx`), and one illustration (`src/components/mail-illustration.tsx`, which pauses by swapping to its still frame):
 
 | Heading | Screen | Added |
 |---|---|---|
 | "Apply. Study. Qualify." | PB-01, the landing page | 21 September 2026 |
 | "Where you can study" (bold, display size) | PB-02, `/programmes` | 22 September 2026 |
+| The sent-mail illustration (an animated image, not a heading) | AU-02, "Check your email" | 22 September 2026 |
 
 They are the only decorative loops in the product. The list is closed: a third needs the same explicit decision, and `tests/motion.test.ts` fails if the component appears anywhere else. Each holds only because of its safeguards, all checked by that test:
 
@@ -59,8 +60,6 @@ They are the only decorative loops in the product. The list is closed: a third n
 - screen readers get the heading once, as text; the typed copy is `aria-hidden`;
 - the full text is laid out invisibly in the same cell, so nothing around it moves;
 - the caret is solid, not blinking, so there is no second loop, and no CSS duration exceeds 240ms.
-
-One further motion item, not a loop: on AU-02 ("Check your email") an illustration of an envelope opening plays **once**, in about one second, when the page loads after a code is sent, and holds on its final frame (`public/illustrations/mail-sent.webp`). It answers an action the person just took, which is what §9 permits motion for; with `prefers-reduced-motion` the still final frame is served instead.
 
 Everything else in §9 stands, on PB-01 as everywhere: no scroll-triggered entrances, no hover lift or scale, no parallax, shimmer or spinners.
 
