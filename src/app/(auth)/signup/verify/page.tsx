@@ -15,25 +15,30 @@ export default async function VerifyPage({
   if (!me) redirect('/signup');
   if (me.status !== 'pending') redirect('/apply');
 
+  /*
+   * The one illustration in the application flow, because it answers the
+   * thing that just happened: a code was sent. It plays once, about a
+   * second, and holds on the envelope with its badge (brief §0.4); with
+   * motion reduced, the still frame is all there is. Decorative, so no alt
+   * text: the heading says the same thing in words.
+   */
+  const illustration = (className: string) => (
+    <picture>
+      <source srcSet="/illustrations/mail-sent-still.webp" media="(prefers-reduced-motion: reduce)" />
+      <img src="/illustrations/mail-sent.webp" alt="" width={480} height={480} className={className} />
+    </picture>
+  );
+
   return (
-    <>
-      {/*
-        The one illustration in the application flow, because it answers
-        the thing that just happened: a code was sent. It plays once, about
-        a second, and holds on the envelope with its badge (brief §0.4);
-        with motion reduced, the still frame is all there is. Decorative,
-        so it has no alt text: the heading says the same thing in words.
-      */}
-      <picture>
-        <source srcSet="/illustrations/mail-sent-still.webp" media="(prefers-reduced-motion: reduce)" />
-        <img
-          src="/illustrations/mail-sent.webp"
-          alt=""
-          width={320}
-          height={320}
-          className="-mt-4 mb-2 -ml-4 block h-32 w-32 md:h-36 md:w-36"
-        />
-      </picture>
+    /*
+     * The auth layout is a 640px column. This page alone widens on a large
+     * screen into the form beside the illustration at its full 480px,
+     * re-centred (the -ml is half of the extra 528px). Below xl it stays the
+     * 640px column, with a smaller illustration above the heading.
+     */
+    <div className="xl:-ml-[264px] xl:grid xl:w-[1168px] xl:grid-cols-[640px_480px] xl:items-center xl:gap-12">
+    <div>
+      {illustration('-mt-4 mb-2 -ml-4 block h-32 w-32 md:h-36 md:w-36 xl:hidden')}
       <h1 className="t-h1 m-0 text-ink-900">Check your email</h1>
       <p className="t-body mt-3 mb-10 text-ink-700">
         We sent a six-digit code to <strong className="text-ink-900">{me.email}</strong>. Enter it
@@ -71,6 +76,8 @@ export default async function VerifyPage({
       >
         <CodeField label="Verification code" />
       </ActionForm>
-    </>
+    </div>
+    {illustration('hidden xl:block h-[480px] w-[480px]')}
+    </div>
   );
 }
