@@ -17,7 +17,8 @@ import {
 } from '@/lib/auth';
 import { hashPassword, randomOtp, randomToken, sha256, verifyPassword } from '@/lib/crypto';
 import { activationMail, otpMail, resetMail, sendMail } from '@/lib/mail';
-import { lockoutMs, rateLimit, verifyTurnstile } from '@/lib/ratelimit';
+import { lockoutMs, rateLimit } from '@/lib/ratelimit';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { audit } from '@/lib/audit';
 import { requireInstitution, tenantUrl } from '@/lib/tenant';
 import { afterLogin, affiliationsOf } from './affiliations';
@@ -48,7 +49,7 @@ export async function signUp(_prev: FormState, form: FormData): Promise<FormStat
   const pwProblem = passwordProblem(password, email);
   if (pwProblem) return { error: pwProblem };
 
-  if (!(await verifyTurnstile(String(form.get('cf-turnstile-response') ?? ''), ip))) {
+  if (!(await verifyTurnstile(String(form.get('cf-turnstile-response') ?? ''), ip, 'signup'))) {
     return { error: 'The security check did not complete. Reload the page and try again.' };
   }
   if (!rateLimit(`signup:${ip}`, 10, 60 * 60_000).allowed) {

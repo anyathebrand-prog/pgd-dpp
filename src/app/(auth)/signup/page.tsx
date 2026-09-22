@@ -3,6 +3,7 @@ import { requireInstitution } from '@/lib/tenant';
 import { ActionForm } from '@/components/form';
 import { Field, Input } from '@/components/ui';
 import { signUp } from '@/modules/auth/actions';
+import { TurnstileWidget } from '@/components/turnstile-widget';
 
 /** AU-01. APP-01: email + password, verified by OTP before the form opens. */
 export default async function SignUpPage() {
@@ -33,6 +34,12 @@ export default async function SignUpPage() {
         >
           <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={10} />
         </Field>
+
+        {/* AUTH-05: shown wherever a site key is configured. Without one
+            (local development) the server skips the check too. */}
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
+          <TurnstileWidget siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} action="signup" />
+        ) : null}
       </ActionForm>
 
       <p className="t-body-sm mt-8 text-ink-700">

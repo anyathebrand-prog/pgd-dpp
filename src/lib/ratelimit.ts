@@ -34,25 +34,3 @@ export function lockoutMs(failedCount: number) {
   if (failedCount < 5) return 0;
   return steps[Math.min(failedCount - 5, steps.length - 1)];
 }
-
-/**
- * AUTH-05. Turnstile rather than reCAPTCHA: lighter on bandwidth, and it does
- * not export data to Google, which would otherwise need justifying in the
- * cross-border transfer register (CMP-11) on a product whose credibility rests
- * on not doing that.
- */
-export async function verifyTurnstile(token: string | null, ip: string | null) {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true; // Not configured locally; enforced in staging and production.
-  if (!token) return false;
-  const body = new FormData();
-  body.append('secret', secret);
-  body.append('response', token);
-  if (ip) body.append('remoteip', ip);
-  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    body,
-  });
-  const json = (await res.json()) as { success: boolean };
-  return json.success;
-}
