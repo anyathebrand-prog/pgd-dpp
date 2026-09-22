@@ -16,6 +16,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string; external
       { href: '/#study', label: 'What you study' },
       { href: '/#how', label: 'How it works' },
       { href: '/#faq', label: 'Questions and answers' },
+      { href: '/teach-with-us', label: 'Teach with us' },
     ],
   },
   {

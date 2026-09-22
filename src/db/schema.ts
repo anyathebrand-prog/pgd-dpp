@@ -920,6 +920,32 @@ export const assignmentFiles = pgTable(
   (t) => [uniqueIndex('assignment_files_object_key_key').on(t.objectKey)],
 );
 
+/**
+ * "Teach with us": someone asking to teach on a university's programme.
+ *
+ * An expression of interest, never access. A facilitator can read and mark
+ * students' work, so the role is only ever granted by the institution's
+ * administrator, from the Staff page, through the ordinary invitation
+ * (inviteStaff). Tenant-scoped: each university sees its own applicants.
+ */
+export const teachingApplications = pgTable('teaching_applications', {
+  id: id(),
+  institutionId: uuid('institution_id')
+    .notNull()
+    .references(() => institutions.id, { onDelete: 'cascade' }),
+  fullName: text('full_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  qualifications: text('qualifications').notNull(),
+  areas: text('areas').notNull(),
+  cvObjectKey: text('cv_object_key'),
+  cvFilename: text('cv_filename'),
+  status: text('status', { enum: ['received', 'invited', 'declined'] }).notNull().default('received'),
+  decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
 export const grades = pgTable('grades', {
   id: id(),
   institutionId: uuid('institution_id')

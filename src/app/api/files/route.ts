@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { readAcrossTenants } from '@/db';
-import { applications, assessments, assignmentFiles, documents, modules, submissions as submissionsFor } from '@/db/schema';
+import { applications, assessments, assignmentFiles, documents, modules, submissions as submissionsFor, teachingApplications } from '@/db/schema';
 import { currentPrincipal } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { getObject, signatureValid } from '@/lib/storage';
@@ -37,6 +37,7 @@ export async function GET(req: Request) {
   if (!me) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
 
   if (/^institutions\/[^/]+\/assignments\//.test(key)) return assignmentFile(key, me);
+  if (/^institutions\/[^/]+\/teaching\//.test(key)) return teachingCv(key, me);
 
   // `documents` is tenant-scoped, but this lookup needs to find the row before
   // it knows the tenant. The object key itself carries the institution id, and
@@ -148,6 +149,47 @@ async function assignmentFile(
       // attachment, not inline: a .docx has no business rendering in the
       // browser, and a PDF someone else wrote is safer downloaded.
       'Content-Disposition': `attachment; filename="${file.file.filename.replace(/[^\w .,()-]/g, '_')}"`,
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-store',
+    },
+  });
+}
+
+/**
+ * A "Teach with us" CV. Only the institution's administrator decides on
+ * the application, so only they (and the DPO and super admin) may read it.
+ */
+async function teachingCv(key: string, me: NonNullable<Awaited<ReturnType<typeof currentPrincipal>>>) {
+  const [row] = await readAcrossTenants('signed-document-access', (tx) =>
+    tx.select().from(teachingApplications).where(eq(teachingApplications.cvObjectKey, key)).limit(1),
+  );
+  if (!row) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+
+  const allowed = me.allMemberships.some(
+    (m) =>
+      (m.institutionId === row.institutionId && m.role === 'institution_admin') ||
+      m.role === 'dpo' ||
+      m.role === 'super_admin',
+  );
+  if (!allowed) return NextResponse.json({ error: 'Not yours to open.' }, { status: 403 });
+
+  await audit({
+    action: 'teaching_application.cv_opened',
+    institutionId: row.institutionId,
+    actorId: me.userId,
+    actorRole: 'staff',
+    entity: 'teaching_applications',
+    entityId: row.id,
+  });
+
+  const body = await getObject(key);
+  return new NextResponse(new Uint8Array(body), {
+    headers: {
+      'Content-Type': row.cvFilename?.toLowerCase().endsWith('.pdf')
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename="${(row.cvFilename ?? 'cv').replace(/[^\w .,()-]/g, '_')}"`,
       'Content-Security-Policy': "default-src 'none'; sandbox",
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'private, no-store',
