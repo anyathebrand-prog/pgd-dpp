@@ -64,10 +64,21 @@ export async function TopBar() {
             ? // An alumnus gets their own home in place of the student
               // dashboard: that screen reads an active enrolment they no
               // longer have, and a nav link to a redirect is a small lie.
-              (me.status === 'alumni'
-                ? [{ href: '/alumni', label: 'Alumni' }, ...STUDENT_NAV.slice(1)]
-                : STUDENT_NAV
-              ).map((item) => (
+              // Staff see their console first. Someone who only teaches or
+              // administers here has no use for the student menu; a member of
+              // staff who is also enrolled gets both.
+              [
+                ...(me.roles.includes('institution_admin') || me.roles.includes('registry')
+                  ? [{ href: '/admin', label: 'Admin console' }]
+                  : []),
+                ...(me.roles.includes('facilitator') ? [{ href: '/teach', label: 'Teaching console' }] : []),
+                ...(me.roles.some((r) => ['institution_admin', 'registry', 'facilitator'].includes(r)) &&
+                !me.roles.includes('student')
+                  ? []
+                  : me.status === 'alumni'
+                    ? [{ href: '/alumni', label: 'Alumni' }, ...STUDENT_NAV.slice(1)]
+                    : STUDENT_NAV),
+              ].map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

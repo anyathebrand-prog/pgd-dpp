@@ -10,8 +10,10 @@ import {
   createSession,
   currentPrincipal,
   destroyCurrentSession,
+  consoleFor,
   MFA_REQUIRED_ROLES,
   passwordProblem,
+  PLATFORM_ROLES,
   requireUser,
   revokeAllSessions,
 } from '@/lib/auth';
@@ -21,7 +23,7 @@ import { lockoutMs, rateLimit } from '@/lib/ratelimit';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { audit } from '@/lib/audit';
 import { requireInstitution, tenantUrl } from '@/lib/tenant';
-import { afterLogin, affiliationsOf } from './affiliations';
+import { afterLogin, affiliationsOf, homeFor } from './affiliations';
 import { issueSwitch } from './switch';
 
 export type FormState = { error?: string; notice?: string; redirectTo?: string } | undefined;
@@ -316,6 +318,17 @@ export async function logIn(_prev: FormState, form: FormData): Promise<FormState
     const token = await issueSwitch(user.id, next.institutionId, true);
     return { redirectTo: tenantUrl(target.slug, `/switch?token=${token}`) };
   }
+
+  // Staff land in their console, not on the applicant's page: a facilitator
+  // signing in used to arrive at /apply under the student menu, because
+  // only 'alumni' and 'student' statuses were routed and everyone else fell
+  // through. The same rule (homeFor) lands the institution switch and
+  // university sign-in, so the three agree.
+  const rolesHere = staffRoles.filter((r) => r.institutionId === institution.id).map((r) => r.role);
+  const staffHere = rolesHere.filter((r) => ['institution_admin', 'registry', 'facilitator'].includes(r));
+  if (staffHere.length > 0) return { redirectTo: homeFor(staffHere) };
+  const platformRoles = staffRoles.map((r) => r.role).filter((r) => PLATFORM_ROLES.includes(r));
+  if (platformRoles.length > 0) return { redirectTo: consoleFor({ roles: [], platformRoles }) };
 
   return {
     // AL-01 is where an alumnus belongs: the student dashboard reads an
