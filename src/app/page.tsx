@@ -5,6 +5,7 @@ import { cohorts, institutions, libraryItems, programmes } from '@/db/schema';
 import { currentInstitution, tenantUrl } from '@/lib/tenant';
 import { marketingImages } from '@/lib/marketing-images';
 import { InstitutionCard } from '@/components/institution-card';
+import { CardSlider } from '@/components/card-slider';
 import { Footer, TopBar } from '@/components/shell';
 import { LinkButton, Naira, Panel, Record, Redacted, cx } from '@/components/ui';
 import { LandingNav } from '@/components/landing-nav';
@@ -458,7 +459,8 @@ async function PlatformLanding() {
                 No institution is taking applications at the moment.
               </p>
             ) : (
-              <ul className="mt-12 grid list-none gap-5 p-0 md:grid-cols-2">
+              <div className="mt-12">
+              <CardSlider label="Universities">
                 {live.map((inst) => (
                   <InstitutionCard key={inst.id} inst={inst}>
                     <p className="t-body-sm mt-0 mb-6">
@@ -470,7 +472,8 @@ async function PlatformLanding() {
                     </LinkButton>
                   </InstitutionCard>
                 ))}
-              </ul>
+              </CardSlider>
+              </div>
             )}
           </div>
         </section>

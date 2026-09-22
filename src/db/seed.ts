@@ -2,7 +2,7 @@
  * §7.9: local is seeded with a TWO-tenant fixture, deliberately.
  *
  * A one-tenant development database makes tenant leaks invisible until
- * production. With two institutions that both have applications, staff and
+ * production. With three institutions that all have applications, staff and
  * cohorts, a missing `institution_id` filter shows up the first time someone
  * opens a queue — and the isolation test in tests/isolation.test.ts has real
  * data on both sides to prove the point.
@@ -197,10 +197,78 @@ async function main() {
         offerExpiryDays: 21,
         status: 'live',
       },
+      {
+        slug: 'futo',
+        name: 'Federal University of Technology, Owerri',
+        shortName: 'FUTO',
+        city: 'Owerri',
+        brandColour: '#1D5E3C',
+        paystackSubaccountCode: 'ACCT_seed_futo',
+        paystackSharePercent: 88,
+        bankName: 'Access Bank',
+        bankAccountName: 'Federal University of Technology Owerri — PGD DPP',
+        bankAccountNumber: '0691247735',
+        offerExpiryDays: 21,
+        status: 'live',
+      },
     ])
     .returning();
 
-  const [unilag, ful] = institutions;
+  const [unilag, ful, futo] = institutions;
+
+  /*
+   * What differs between the seeded universities, in one table, so a new
+   * one gets its own people and figures instead of silently copying the
+   * last. Keyed by slug.
+   */
+  const PER: Record<
+    string,
+    {
+      intake: string;
+      capacity: number;
+      applicationKobo: number;
+      tuitionKobo: number;
+      facilitator: string;
+      candidate: string;
+      candidateState: string;
+      student: string;
+      matric: string;
+    }
+  > = {
+    unilag: {
+      intake: 'January 2027 intake',
+      capacity: 60,
+      applicationKobo: 2_500_000,
+      tuitionKobo: 45_000_000,
+      facilitator: 'Dr Yemi Sowande',
+      candidate: 'Blessing Oyelaran',
+      candidateState: 'Ogun',
+      student: 'Kelechi Obi',
+      matric: 'A1042',
+    },
+    fulokoja: {
+      intake: 'February 2027 intake',
+      capacity: 40,
+      applicationKobo: 2_000_000,
+      tuitionKobo: 38_000_000,
+      facilitator: 'Dr Ngozi Okafor',
+      candidate: 'Emeka Aniuno',
+      candidateState: 'Anambra',
+      student: 'Hauwa Suleiman',
+      matric: 'B2071',
+    },
+    futo: {
+      intake: 'March 2027 intake',
+      capacity: 50,
+      applicationKobo: 2_200_000,
+      tuitionKobo: 40_000_000,
+      facilitator: 'Dr Chinedu Nwachukwu',
+      candidate: 'Amarachi Okeke',
+      candidateState: 'Imo',
+      student: 'Obinna Eze',
+      matric: 'C3108',
+    },
+  };
 
   for (const inst of institutions) {
     const [programme] = await db
@@ -219,8 +287,8 @@ async function main() {
       .values({
         institutionId: inst.id,
         programmeId: programme.id,
-        name: inst.slug === 'unilag' ? 'January 2027 intake' : 'February 2027 intake',
-        capacity: inst.slug === 'unilag' ? 60 : 40,
+        name: PER[inst.slug].intake,
+        capacity: PER[inst.slug].capacity,
         applicationOpensAt: new Date(Date.now() - 30 * day),
         applicationClosesAt: new Date(Date.now() + 60 * day),
         startsAt: new Date(Date.now() + 90 * day),
@@ -233,7 +301,7 @@ async function main() {
         institutionId: inst.id,
         kind: 'application',
         label: 'Application fee',
-        amountKobo: inst.slug === 'unilag' ? 2_500_000 : 2_000_000,
+        amountKobo: PER[inst.slug].applicationKobo,
       },
       { institutionId: inst.id, cohortId: cohort.id, kind: 'acceptance', label: 'Acceptance fee', amountKobo: 5_000_000 },
       {
@@ -241,7 +309,7 @@ async function main() {
         cohortId: cohort.id,
         kind: 'tuition',
         label: 'Tuition, first semester',
-        amountKobo: inst.slug === 'unilag' ? 45_000_000 : 38_000_000,
+        amountKobo: PER[inst.slug].tuitionKobo,
       },
       { institutionId: inst.id, cohortId: cohort.id, kind: 'library_levy', label: 'Library levy', amountKobo: 1_500_000 },
     ]);
@@ -385,7 +453,7 @@ async function main() {
       .insert(s.users)
       .values({
         email: `facilitator@${inst.slug}.example.ng`,
-        fullName: inst.slug === 'unilag' ? 'Dr Yemi Sowande' : 'Dr Ngozi Okafor',
+        fullName: PER[inst.slug].facilitator,
         passwordHash,
         status: 'staff',
         emailVerifiedAt: new Date(),
@@ -424,6 +492,8 @@ async function main() {
     { email: 'admin@unilag.example.ng', name: 'Tunde Bakare', inst: unilag, role: 'institution_admin' as const },
     { email: 'registry@fulokoja.example.ng', name: 'Ojone Adejoh', inst: ful, role: 'registry' as const },
     { email: 'admin@fulokoja.example.ng', name: 'Abdullahi Salihu', inst: ful, role: 'institution_admin' as const },
+    { email: 'registry@futo.example.ng', name: 'Chiamaka Iwu', inst: futo, role: 'registry' as const },
+    { email: 'admin@futo.example.ng', name: 'Ikenna Duru', inst: futo, role: 'institution_admin' as const },
   ];
 
   for (const member of staff) {
@@ -470,7 +540,7 @@ async function main() {
 
     const candidate = await user(
       `candidate@${inst.slug}.example.ng`,
-      inst.slug === 'unilag' ? 'Blessing Oyelaran' : 'Emeka Aniuno',
+      PER[inst.slug].candidate,
       'candidate',
     );
     await db.insert(s.memberships).values({ userId: candidate.id, institutionId: inst.id, role: 'candidate' });
@@ -485,12 +555,12 @@ async function main() {
         status: 'submitted',
         submittedAt: new Date(Date.now() - 6 * day),
         personal: {
-          fullName: inst.slug === 'unilag' ? 'Blessing Oyelaran' : 'Emeka Aniuno',
+          fullName: PER[inst.slug].candidate,
           dob: '1994-04-12',
           gender: 'female',
           phone: '08031234567',
           address: '14 Association Road, Ikeja',
-          stateOfOrigin: inst.slug === 'unilag' ? 'Ogun' : 'Anambra',
+          stateOfOrigin: PER[inst.slug].candidateState,
           nationality: 'Nigerian',
           nokName: 'Folake Oyelaran',
           nokPhone: '08039876543',
@@ -531,7 +601,7 @@ async function main() {
       applicationId: application.id,
       reference: `APP-SEED${inst.slug.toUpperCase()}`,
       context: 'application',
-      amountKobo: inst.slug === 'unilag' ? 2_500_000 : 2_000_000,
+      amountKobo: PER[inst.slug].applicationKobo,
       status: 'success',
       paidAt: new Date(Date.now() - 6 * day),
       subaccountCode: inst.paystackSubaccountCode,
@@ -542,7 +612,7 @@ async function main() {
     /* An enrolled student, so the learning surfaces have a subject. */
     const student = await user(
       `student@${inst.slug}.example.ng`,
-      inst.slug === 'unilag' ? 'Kelechi Obi' : 'Hauwa Suleiman',
+      PER[inst.slug].student,
       'student',
     );
     await db.insert(s.memberships).values({ userId: student.id, institutionId: inst.id, role: 'student' });
@@ -550,7 +620,7 @@ async function main() {
       institutionId: inst.id,
       userId: student.id,
       cohortId: cohort.id,
-      matricNumber: `${inst.shortName}/DPP/2027/${inst.slug === 'unilag' ? 'A1042' : 'B2071'}`,
+      matricNumber: `${inst.shortName}/DPP/2027/${PER[inst.slug].matric}`,
     });
 
     // An attempt waiting to be marked. The MCQ and true/false are already
@@ -611,9 +681,10 @@ async function main() {
   ]);
 
   console.log('');
-  console.log('Seeded two tenants.');
+  console.log('Seeded three tenants.');
   console.log('  http://unilag.localhost:3000   University of Lagos');
-  console.log('  http://fulokoja.localhost:3000      Federal University Lokoja');
+  console.log('  http://fulokoja.localhost:3000 Federal University Lokoja');
+  console.log('  http://futo.localhost:3000     Federal University of Technology, Owerri');
   console.log('  http://localhost:3000          platform landing');
   console.log('');
   console.log(`Every seeded account uses the password: ${PASSWORD}`);
@@ -626,7 +697,7 @@ async function main() {
   console.log('  curator@example.ng            library curator at http://app.localhost:3000/curate');
   console.log('  platform@example.ng           super admin at http://app.localhost:3000/platform/tenants');
   console.log('');
-  console.log('The FUL accounts mirror these. Try reading a UNILAG record while signed in as FUL.');
+  console.log('The FUL and FUTO accounts mirror these. Try reading a UNILAG record while signed in as FUL.');
 
   await sql.end();
 }

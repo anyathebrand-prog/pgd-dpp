@@ -46,6 +46,7 @@ Then:
 | http://localhost:3000 | Platform landing (PB-01) |
 | http://unilag.localhost:3000 | University of Lagos tenant |
 | http://fulokoja.localhost:3000 | Federal University Lokoja tenant |
+| http://futo.localhost:3000 | Federal University of Technology, Owerri tenant |
 | http://app.localhost:3000/dpo | DPO console |
 
 `*.localhost` subdomains resolve without any hosts-file editing in Chrome, Edge and Firefox. If
@@ -66,7 +67,7 @@ Password for all of them: `Passw0rd-seed-2026`
 | `dpo@example.ng` | DPO console, `/dpo` — **2FA** | `app.localhost:3000/login` |
 | `curator@example.ng` | Library curation, `/curate` | `app.localhost:3000/login` |
 
-The `fulokoja` accounts mirror these. **Sign in as FUL staff and try to reach a UNILAG record** — that is
+The `fulokoja` and `futo` accounts mirror these. **Sign in as FUL staff and try to reach a UNILAG record** — that is
 what the two-tenant fixture is for.
 
 Nothing here needs a working mailbox: every seeded account is already verified and has a password.
