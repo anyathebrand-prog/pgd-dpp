@@ -1,8 +1,10 @@
 /**
- * "Teach with us": asking to teach, and the administrator's answer.
+ * "Teach with us": applying to the one central faculty, and the Hub's answer.
  *
- * Applying grants nothing; the institution administrator invites (through
- * the ordinary facilitator invitation) or declines. The public form is
+ * The faculty is run by Data Protection Hub in collaboration with ALDAPCON,
+ * so there is no university to pick. Applying grants nothing; the Hub's
+ * super admin invites (choosing the universities the person will teach at)
+ * or declines, in the platform console. The public form is
  * Turnstile-protected, so what its test can prove depends on configuration:
  * with a secret set, an automated submission must be refused; without one,
  * it goes through and lands in the queue.
@@ -13,14 +15,13 @@ import postgres from 'postgres';
 import 'dotenv/config';
 
 const PASSWORD = 'Passw0rd-seed-2026';
-const ADMIN = 'admin@unilag.example.ng';
+const ADMIN = 'platform@example.ng';
 const RUN = Date.now();
 // A fresh secret each run, cleared afterwards: never a published example
 // secret on an account that may be reachable through a preview tunnel.
 const SECRET = Array.from(randomBytes(20), (b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[b % 32]).join('');
 const TURNSTILE_ON = Boolean(process.env.TURNSTILE_SECRET_KEY);
 
-let unilagId = '';
 
 function sql() {
   return postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
@@ -49,13 +50,12 @@ async function adminPage(browser: Browser, baseURL: string | undefined) {
   await page.waitForURL(/\/login\/2fa/, { timeout: 30_000 });
   await page.locator('#code').fill(totp());
   await page.getByRole('button', { name: /Verify|Continue|Confirm/ }).click();
-  await page.waitForURL(/\/admin/, { timeout: 30_000 });
+  await page.waitForURL(/\/platform/, { timeout: 30_000 });
   return { ctx, page };
 }
 
 test.beforeAll(async () => {
   const db = sql();
-  unilagId = (await db`SELECT id FROM institutions WHERE slug = 'unilag'`)[0].id;
   await db`UPDATE users SET totp_secret = ${SECRET}, totp_confirmed_at = now() WHERE email = ${ADMIN}`;
   await db.end();
 });
@@ -72,10 +72,12 @@ test.describe.configure({ mode: 'serial' });
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Teach with us', () => {
-  test('the main site asks which university first', async ({ page, baseURL }) => {
-    await page.goto(`${baseURL!.replace('//unilag.', '//')}/teach-with-us`);
-    for (const name of ['University of Lagos', 'Federal University Lokoja', 'Kaduna State University']) {
-      await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible();
+  test('one form on every site, with no university to pick', async ({ page, baseURL }) => {
+    for (const url of [`${baseURL!.replace('//unilag.', '//')}/teach-with-us`, '/teach-with-us']) {
+      await page.goto(url);
+      await expect(page.getByText('Data Protection Hub · in collaboration with ALDAPCON')).toBeVisible();
+      await expect(page.locator('#fullName')).toBeVisible();
+      await expect(page.getByRole('link', { name: /University of Lagos/ })).toHaveCount(0);
     }
   });
 
@@ -98,38 +100,45 @@ test.describe('Teach with us', () => {
     expect(rows.length).toBe(TURNSTILE_ON ? 0 : 1);
   });
 
-  test('the administrator invites one and declines another', async ({ browser, baseURL }) => {
+  test('the Hub invites one to chosen universities, and declines another', async ({ browser, baseURL }) => {
     const db = sql();
     for (const who of ['invite', 'decline']) {
       await db`
-        INSERT INTO teaching_applications (institution_id, full_name, email, qualifications, areas)
-        VALUES (${unilagId}, ${`E2E ${who} ${RUN}`}, ${`teach-${RUN}-${who}@example.ng`},
+        INSERT INTO teaching_applications (full_name, email, qualifications, areas)
+        VALUES (${`E2E ${who} ${RUN}`}, ${`teach-${RUN}-${who}@example.ng`},
           'CIPP/E, ten years in privacy practice at a telecoms operator.', 'DPIAs')`;
     }
     await db.end();
 
     const { ctx, page } = await adminPage(browser, baseURL);
-    await page.goto('/admin/staff');
-    await expect(page.getByRole('heading', { name: 'People who want to teach' })).toBeVisible();
+    await page.goto('/platform/faculty');
+    await expect(page.getByRole('heading', { name: 'Faculty applications' })).toBeVisible();
 
+    // Inviting without choosing a university is refused.
     const invite = page.locator('li').filter({ hasText: `E2E invite ${RUN}` });
-    await invite.getByRole('button', { name: 'Invite as facilitator' }).click();
-    await expect(page.getByText(`E2E invite ${RUN} can now work here`)).toBeVisible({ timeout: 30_000 });
+    await invite.getByRole('button', { name: 'Invite to the faculty' }).click();
+    await expect(invite.getByText('Choose at least one university')).toBeVisible({ timeout: 30_000 });
 
-    await page.goto('/admin/staff');
+    await invite.getByRole('checkbox', { name: 'University of Lagos' }).check();
+    await invite.getByRole('checkbox', { name: 'Kaduna State University' }).check();
+    await invite.getByRole('button', { name: 'Invite to the faculty' }).click();
+    await expect(page.getByText(`E2E invite ${RUN} invited to the faculty`)).toBeVisible({ timeout: 30_000 });
+
     const decline = page.locator('li').filter({ hasText: `E2E decline ${RUN}` });
     await decline.getByRole('button', { name: 'Decline' }).click();
     await expect(page.getByText(`E2E decline ${RUN}'s application declined`)).toBeVisible({ timeout: 30_000 });
     await ctx.close();
 
     const check = sql();
-    const rows = await check`
-      SELECT t.email, t.status, (SELECT count(*)::int FROM memberships m JOIN users u ON u.id = m.user_id
-        WHERE u.email = t.email AND m.role = 'facilitator') AS facilitator
-      FROM teaching_applications t WHERE t.email LIKE ${`teach-${RUN}-%`} ORDER BY t.email`;
+    const apps = await check`SELECT email, status FROM teaching_applications WHERE email LIKE ${`teach-${RUN}-%`} ORDER BY email`;
+    const where = await check`
+      SELECT i.slug FROM memberships m JOIN users u ON u.id = m.user_id JOIN institutions i ON i.id = m.institution_id
+      WHERE u.email = ${`teach-${RUN}-invite@example.ng`} AND m.role = 'facilitator' ORDER BY i.slug`;
     await check.end();
-    const by = Object.fromEntries(rows.map((r) => [r.email.split('-').at(-1)!.split('@')[0], r]));
-    expect(by.invite).toMatchObject({ status: 'invited', facilitator: 1 });
-    expect(by.decline).toMatchObject({ status: 'declined', facilitator: 0 });
+    expect(Object.fromEntries(apps.map((r) => [r.email.includes('invite') ? 'invite' : 'decline', r.status]))).toEqual({
+      decline: 'declined',
+      invite: 'invited',
+    });
+    expect(where.map((r) => r.slug)).toEqual(['kasu', 'unilag']);
   });
 });

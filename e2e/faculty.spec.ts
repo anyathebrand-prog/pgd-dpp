@@ -1,8 +1,8 @@
 /**
  * The Faculty page, and each facilitator's control over their own profile.
  *
- * Only published profiles appear; a university's own site shows only its
- * own facilitators; unpublishing takes the card and the photograph offline
+ * One central faculty (Data Protection Hub with ALDAPCON), the same on every
+ * site; only published profiles appear; unpublishing takes the card and the photograph offline
  * together; and "Teach with us" has moved from the programme menu to the
  * foot of this page.
  */
@@ -47,14 +47,14 @@ test.describe('Faculty', () => {
   test('lists published profiles, with Teach with us at the foot', async ({ page, baseURL }) => {
     await page.goto(`${apex(baseURL)}/faculty`);
     await expect(page.getByRole('heading', { name: NAME })).toBeVisible();
-    await expect(page.getByText('University of Lagos').first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Teach with us' }).last()).toHaveAttribute('href', '/teach-with-us');
   });
 
-  test("a university's own site shows only its own facilitators", async ({ page, baseURL }) => {
+  test('is one central faculty, the same on every site', async ({ page, baseURL }) => {
     await page.goto(`${baseURL!.replace('//unilag.', '//fulokoja.')}/faculty`);
+    await expect(page.getByText('Data Protection Hub · in collaboration with ALDAPCON')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Dr Ngozi Okafor' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: NAME })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: NAME })).toBeVisible();
   });
 
   test('the facilitator adds a photograph, and unpublishing takes card and photograph down', async ({ page, baseURL }) => {

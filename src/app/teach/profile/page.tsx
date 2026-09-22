@@ -19,7 +19,7 @@ export default async function MyProfile({
 }: {
   searchParams: Promise<{ saved?: string }>;
 }) {
-  const institution = await requireInstitution();
+  await requireInstitution();
   const me = await requireRole('facilitator');
   const { saved } = await searchParams;
 
@@ -60,7 +60,7 @@ export default async function MyProfile({
           <Field label="Photograph" name="photo" helper="JPG or PNG, at least 300 pixels each way, up to 5MB. A head-and-shoulders portrait works best.">
             <Input id="photo" name="photo" type="file" accept="image/jpeg,image/png" />
           </Field>
-          <Field label="Title" name="title" helper={`For example: Senior Lecturer, Faculty of Law, ${institution.shortName}.`}>
+          <Field label="Title" name="title" helper="For example: Senior Lecturer in Law; DPO and licensed DPCO.">
             <Input id="title" name="title" defaultValue={profile?.title ?? ''} maxLength={120} />
           </Field>
           <Field
@@ -92,7 +92,7 @@ export default async function MyProfile({
             name={name}
             title={profile?.title ?? null}
             bio={profile?.bio ?? 'Your profile will appear here.'}
-            universities={[institution.name]}
+            universities={[]}
             photoUrl={photoUrl}
           />
           {profile?.photoObjectKey ? (

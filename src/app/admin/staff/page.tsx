@@ -1,14 +1,11 @@
 import Link from 'next/link';
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { db, withTenant } from '@/db';
-import { institutions, memberships, teachingApplications, users } from '@/db/schema';
+import { db } from '@/db';
+import { institutions, memberships, users } from '@/db/schema';
 import { requireRole } from '@/lib/auth';
 import { requireInstitution } from '@/lib/tenant';
 import { Banner, EmptyState, Panel, Record, cx } from '@/components/ui';
 import { GRANTABLE, ROLE_COPY, type GrantableRole } from '@/modules/admin/staff-roles';
-import { ActionForm } from '@/components/form';
-import { signedUrl } from '@/lib/storage';
-import { declineTeachingApplicant, inviteTeachingApplicant } from '@/modules/admin/teaching-applications';
 import { AttestForm, InviteForm, RevokeRole } from '@/components/staff-panels';
 import { trainingFor } from '@/modules/compliance/training-status';
 
@@ -43,21 +40,12 @@ export default async function Staff({
     role?: string;
     invited?: string;
     attested?: string;
-    declined?: string;
   }>;
 }) {
   const institution = await requireInstitution();
   await requireRole('institution_admin');
-  const { granted, revoked, role: affectedRole, invited, attested, declined } = await searchParams;
+  const { granted, revoked, role: affectedRole, invited, attested } = await searchParams;
 
-  // "Teach with us" applications waiting for an answer, oldest first.
-  const wanting = await withTenant(institution.id, (tx) =>
-    tx
-      .select()
-      .from(teachingApplications)
-      .where(eq(teachingApplications.status, 'received'))
-      .orderBy(asc(teachingApplications.createdAt)),
-  );
 
   const [current] = await db
     .select()
@@ -130,58 +118,6 @@ export default async function Staff({
           {people.length} {people.length === 1 ? 'person' : 'people'} with access
         </p>
       </div>
-
-      {declined ? (
-        <div className="mb-8">
-          <Banner tone="info" title={`${declined}'s application declined`}>
-            <p>Their CV has been deleted. Reply to them by email if you have not already.</p>
-          </Banner>
-        </div>
-      ) : null}
-
-      {wanting.length > 0 ? (
-        <section aria-labelledby="wanting" className="mb-10">
-          <h2 id="wanting" className="t-h2 m-0 mb-2 text-ink-900">
-            People who want to teach
-          </h2>
-          <p className="t-body-sm m-0 mb-5 text-ink-700">
-            From the public &ldquo;Teach with us&rdquo; form. Inviting sends the ordinary
-            facilitator invitation; declining deletes their CV. Nothing is granted until you invite.
-          </p>
-          <ul className="m-0 grid list-none gap-5 p-0 lg:grid-cols-2">
-            {wanting.map((a) => (
-              <Record
-                as="li"
-                key={a.id}
-                title={a.fullName}
-                meta={`${a.email}${a.phone ? ` · ${a.phone}` : ''} · applied ${a.createdAt.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}`}
-              >
-                <p className="t-caption m-0 text-ink-700">Qualifications and experience</p>
-                <p className="t-body-sm mt-1 mb-4 whitespace-pre-line text-ink-900">{a.qualifications}</p>
-                <p className="t-caption m-0 text-ink-700">Would like to teach</p>
-                <p className="t-body-sm mt-1 mb-4 whitespace-pre-line text-ink-900">{a.areas}</p>
-                {a.cvObjectKey ? (
-                  <p className="t-body-sm mt-0 mb-5">
-                    <a href={signedUrl(a.cvObjectKey)} className="text-ink-900 underline underline-offset-2">
-                      Download CV{a.cvFilename ? ` (${a.cvFilename})` : ''}
-                    </a>
-                  </p>
-                ) : (
-                  <p className="t-body-sm mt-0 mb-5 text-ink-700">No CV attached.</p>
-                )}
-                <div className="flex flex-wrap items-start gap-3">
-                  <ActionForm action={inviteTeachingApplicant} submitLabel="Invite as facilitator">
-                    <input type="hidden" name="applicationId" value={a.id} />
-                  </ActionForm>
-                  <ActionForm action={declineTeachingApplicant} submitLabel="Decline">
-                    <input type="hidden" name="applicationId" value={a.id} />
-                  </ActionForm>
-                </div>
-              </Record>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       {granted ? (
         <div className="mb-8">

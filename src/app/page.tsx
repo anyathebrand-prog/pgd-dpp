@@ -795,15 +795,6 @@ async function TenantHome() {
                 {programme?.entryRequirements ?? 'Published by the institution.'}
               </p>
             </Panel>
-            <Panel title="Teach on the programme">
-              <p className="t-body-sm mt-0 mb-3 text-ink-700">
-                Practitioners and academics can ask to teach here. {institution.shortName}&apos;s
-                administrator reviews every application.
-              </p>
-              <Link href="/teach-with-us" className="t-body-sm text-ink-900 underline underline-offset-2">
-                Teach with us
-              </Link>
-            </Panel>
             <Panel title="Already applied?">
               <Link href="/apply" className="t-body-sm text-ink-900 underline underline-offset-2">
                 Check the status of your application

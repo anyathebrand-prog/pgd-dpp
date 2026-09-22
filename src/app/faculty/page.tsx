@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { facilitatorProfiles, institutions, memberships, users } from '@/db/schema';
 import { currentInstitution } from '@/lib/tenant';
@@ -11,11 +11,10 @@ import { FacultyCard } from '@/components/faculty-card';
 /**
  * Faculty: the people who teach the programme.
  *
- * Only facilitators who have published their own profile appear (the
- * profile is theirs to show or withhold; see "My profile" in the teaching
- * console). On the main site, every university's; on a university's own
- * site, that university's. Each card names every university the person
- * teaches for.
+ * One central faculty, run by Data Protection Hub in collaboration with
+ * ALDAPCON, and the same list on every host. Only facilitators who have
+ * published their own profile appear (the profile is theirs to show or
+ * withhold; see "My profile" in the teaching console).
  *
  * `facilitator_profiles`, `users`, `memberships` and `institutions` are all
  * shared tables, so this reads without tenant context and returns only
@@ -39,11 +38,7 @@ export default async function Faculty() {
     .innerJoin(users, eq(users.id, facilitatorProfiles.userId))
     .innerJoin(memberships, and(eq(memberships.userId, users.id), eq(memberships.role, 'facilitator')))
     .innerJoin(institutions, and(eq(institutions.id, memberships.institutionId), eq(institutions.status, 'live')))
-    .where(
-      here
-        ? and(eq(facilitatorProfiles.published, true), inArray(memberships.institutionId, [here.id]))
-        : eq(facilitatorProfiles.published, true),
-    )
+    .where(eq(facilitatorProfiles.published, true))
     .orderBy(asc(users.fullName));
 
   // One card per person, listing each university they teach for.
@@ -64,13 +59,15 @@ export default async function Faculty() {
     <main id="main">
       <section className="glow-hero border-b border-ink-300">
         <div className="mx-auto max-w-marketing px-4 py-16 md:px-8 md:py-24">
-          <p className="t-caption m-0 text-ink-500">{here ? here.name : 'Across every university'}</p>
+          <p className="t-caption m-0 text-ink-500">Data Protection Hub · in collaboration with ALDAPCON</p>
           <div className="mt-4">
             <h1 className="t-display m-0">Faculty</h1>
           </div>
           <p className="t-body-lg mt-6 max-w-[58ch] text-ink-700">
-            The people who teach the programme: lawyers, regulators, DPOs and academics who practise
-            what they teach. Each university appoints its own.
+            One faculty teaches the programme at every university: lawyers, regulators, DPOs and
+            academics who practise what they teach, brought together by Data Protection Hub in
+            collaboration with the Association of Licensed Data Protection Compliance Organisations
+            of Nigeria (ALDAPCON).
           </p>
         </div>
       </section>
@@ -89,7 +86,7 @@ export default async function Faculty() {
                     name={p.name}
                     title={p.title}
                     bio={p.bio}
-                    universities={here ? [] : p.universities}
+                    universities={[]}
                     photoUrl={p.photo ? `/api/faculty/${userId}/photo` : null}
                   />
                 </li>
@@ -103,8 +100,8 @@ export default async function Faculty() {
         <div className="glow-band mx-auto max-w-marketing rounded-lg px-6 py-14 text-center md:px-16">
           <h2 className="t-h1 m-0">Teach with us</h2>
           <p className="t-body-lg mx-auto mt-4 max-w-[52ch] text-ink-900/85">
-            Practitioners and academics can ask to teach on the programme. Each university&apos;s
-            administrator reviews every application.
+            Practitioners and academics can apply to join the faculty. Data Protection Hub reviews
+            every application.
           </p>
           <div className="mt-8">
             <LinkButton href="/teach-with-us">Teach with us</LinkButton>

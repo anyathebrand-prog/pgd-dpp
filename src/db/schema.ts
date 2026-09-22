@@ -921,18 +921,17 @@ export const assignmentFiles = pgTable(
 );
 
 /**
- * "Teach with us": someone asking to teach on a university's programme.
+ * "Teach with us": someone asking to join the faculty.
  *
- * An expression of interest, never access. A facilitator can read and mark
- * students' work, so the role is only ever granted by the institution's
- * administrator, from the Staff page, through the ordinary invitation
- * (inviteStaff). Tenant-scoped: each university sees its own applicants.
+ * There is one central faculty, run by Data Protection Hub in collaboration
+ * with ALDAPCON, so an application goes to the Hub, not to a university.
+ * It is an expression of interest, never access: the Hub reviews it in the
+ * platform console and, if it invites the person, chooses which
+ * universities they will teach at. Shared (no institution), for that
+ * reason.
  */
 export const teachingApplications = pgTable('teaching_applications', {
   id: id(),
-  institutionId: uuid('institution_id')
-    .notNull()
-    .references(() => institutions.id, { onDelete: 'cascade' }),
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
   phone: text('phone'),
@@ -1654,6 +1653,7 @@ export const SHARED_TABLES = [
   'bookmarks',
   'alumni_profiles',
   'facilitator_profiles',
+  'teaching_applications',
   'privacy_notices',
   'consent_records',
   'data_subject_requests',

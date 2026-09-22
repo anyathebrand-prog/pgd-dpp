@@ -37,7 +37,7 @@ export async function GET(req: Request) {
   if (!me) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
 
   if (/^institutions\/[^/]+\/assignments\//.test(key)) return assignmentFile(key, me);
-  if (/^institutions\/[^/]+\/teaching\//.test(key)) return teachingCv(key, me);
+  if (/^faculty-applications\//.test(key)) return teachingCv(key, me);
 
   // `documents` is tenant-scoped, but this lookup needs to find the row before
   // it knows the tenant. The object key itself carries the institution id, and
@@ -157,8 +157,8 @@ async function assignmentFile(
 }
 
 /**
- * A "Teach with us" CV. Only the institution's administrator decides on
- * the application, so only they (and the DPO and super admin) may read it.
+ * A "Teach with us" CV. The faculty is central, so the Hub (super admin)
+ * decides; the DPO may also read it. Nobody at a university can.
  */
 async function teachingCv(key: string, me: NonNullable<Awaited<ReturnType<typeof currentPrincipal>>>) {
   const [row] = await readAcrossTenants('signed-document-access', (tx) =>
@@ -166,17 +166,11 @@ async function teachingCv(key: string, me: NonNullable<Awaited<ReturnType<typeof
   );
   if (!row) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
-  const allowed = me.allMemberships.some(
-    (m) =>
-      (m.institutionId === row.institutionId && m.role === 'institution_admin') ||
-      m.role === 'dpo' ||
-      m.role === 'super_admin',
-  );
+  const allowed = me.platformRoles.includes('super_admin') || me.platformRoles.includes('dpo');
   if (!allowed) return NextResponse.json({ error: 'Not yours to open.' }, { status: 403 });
 
   await audit({
     action: 'teaching_application.cv_opened',
-    institutionId: row.institutionId,
     actorId: me.userId,
     actorRole: 'staff',
     entity: 'teaching_applications',
