@@ -7,6 +7,8 @@ import { Footer, TopBar } from '@/components/shell';
 import { Banner, Field, Input, Textarea } from '@/components/ui';
 import { TurnstileWidget } from '@/components/turnstile-widget';
 import { submitTeachingApplication } from '@/modules/admin/teaching-applications';
+import { ModulePicker } from '@/components/module-picker';
+import { SYLLABUS } from '@/modules/learning/syllabus';
 
 /**
  * "Teach with us": applying to the one central faculty.
@@ -62,11 +64,19 @@ export default async function TeachWithUs({
           </Field>
           <Field
             label="What you would like to teach"
-            name="areas"
+            name="modules"
+            inputId="modules"
             required
-            helper="For example: the NDPA 2023 in practice, breach response, DPIAs."
+            helper="The programme's modules. Choose every one you could teach."
           >
-            <Textarea id="areas" name="areas" rows={3} required />
+            <ModulePicker id="modules" name="modules" modules={SYLLABUS} />
+          </Field>
+          <Field
+            label="Anything else you could teach"
+            name="areasOther"
+            helper="Topics outside the modules above, if any."
+          >
+            <Textarea id="areasOther" name="areasOther" rows={2} maxLength={500} />
           </Field>
           <Field label="CV" name="cv" required helper="PDF or Word (.docx), up to 5MB.">
             <Input

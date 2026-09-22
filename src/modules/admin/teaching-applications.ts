@@ -12,6 +12,7 @@ import { rateLimit } from '@/lib/ratelimit';
 import { verifyTurnstile } from '@/lib/turnstile';
 import { APPLICATION_MAX_BYTES, CERTS_MAX_EACH_KIND, CONTENT_TYPE, fileProblem, sniffKind } from './faculty-files';
 import { issueActivationLink } from '../auth/actions';
+import { MODULE_TITLES } from '@/modules/learning/syllabus';
 import type { FormState } from '../auth/actions';
 
 /**
@@ -34,7 +35,10 @@ export async function submitTeachingApplication(_prev: FormState, form: FormData
   const email = String(form.get('email') ?? '').trim().toLowerCase();
   const phone = String(form.get('phone') ?? '').trim();
   const qualifications = String(form.get('qualifications') ?? '').trim();
-  const areas = String(form.get('areas') ?? '').trim();
+  // Modules from the syllabus, and only those: the list is the choice.
+  const modules = form.getAll('modules').map(String).filter((m) => MODULE_TITLES.includes(m));
+  const other = String(form.get('areasOther') ?? '').trim().slice(0, 500);
+  const areas = [modules.join('; '), other ? `Also: ${other}` : ''].filter(Boolean).join('\n');
   const cv = form.get('cv');
   const files = (name: string) => form.getAll(name).filter((f): f is File => f instanceof File && f.size > 0);
   const academic = files('academicCerts');
@@ -45,7 +49,7 @@ export async function submitTeachingApplication(_prev: FormState, form: FormData
   if (qualifications.length < 20) {
     return { error: 'Say something about your qualifications and experience: a few sentences is enough.' };
   }
-  if (areas.length < 5) return { error: 'Say which parts of the programme you would like to teach.' };
+  if (modules.length === 0) return { error: 'Choose at least one module you would like to teach.' };
   if (form.get('consent') !== 'on') {
     return { error: 'Confirm that Data Protection Hub may hold these details to consider your application.' };
   }

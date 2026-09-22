@@ -92,13 +92,30 @@ test.describe('Teach with us', () => {
     await page.locator('#fullName').fill('Dr Test Applicant');
     await page.locator('#email').fill(`teach-${RUN}-nocerts@example.ng`);
     await page.locator('#qualifications').fill('LLM in data protection law; eight years as a DPO in banking.');
-    await page.locator('#areas').fill('Breach response and the 72-hour clock');
-    await page.getByRole('checkbox').check();
+    await page.getByRole('button', { name: /What you would like to teach/ }).click();
+    await page.getByRole('checkbox', { name: /The Act itself/ }).check();
+    await page.getByRole('checkbox', { name: /Breach handling/ }).check();
+    await expect(page.getByText('2 chosen: The Act itself, Breach handling')).toBeVisible();
+    await page.getByRole('checkbox', { name: /may hold these details/ }).check();
     await page.locator('#cv').setInputFiles({ name: 'cv.pdf', mimeType: 'application/pdf', buffer: PDF });
     // The browser's own "required" is a convenience; the server decides.
     await page.evaluate(() => document.querySelectorAll('input[type=file]').forEach((i) => i.removeAttribute('required')));
     await page.getByRole('button', { name: 'Send my application' }).click();
     await expect(page.getByText('Attach at least one academic certificate')).toBeVisible({ timeout: 30_000 });
+    // Both modules survive the refused submission, not just the last one.
+    await expect(page.getByRole('checkbox', { name: /The Act itself/ })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: /Breach handling/ })).toBeChecked();
+  });
+
+  test('at least one module must be chosen', async ({ page }) => {
+    await page.goto('/teach-with-us');
+    await page.waitForLoadState('load');
+    await page.locator('#fullName').fill('Dr Test Applicant');
+    await page.locator('#email').fill(`teach-${RUN}-nomodule@example.ng`);
+    await page.locator('#qualifications').fill('LLM in data protection law; eight years as a DPO in banking.');
+    await page.getByRole('checkbox', { name: /may hold these details/ }).check();
+    await page.getByRole('button', { name: 'Send my application' }).click();
+    await expect(page.getByText('Choose at least one module you would like to teach')).toBeVisible({ timeout: 30_000 });
   });
 
   test('a complete application is refused or sent, as the security check is configured', async ({ page }) => {
@@ -107,14 +124,15 @@ test.describe('Teach with us', () => {
     await page.locator('#fullName').fill('Dr Test Applicant');
     await page.locator('#email').fill(`teach-${RUN}-form@example.ng`);
     await page.locator('#qualifications').fill('LLM in data protection law; eight years as a DPO in banking.');
-    await page.locator('#areas').fill('Breach response and the 72-hour clock');
+    await page.getByRole('button', { name: /What you would like to teach/ }).click();
+    await page.getByRole('checkbox', { name: /DPIAs and privacy by design/ }).check();
     await page.locator('#cv').setInputFiles({ name: 'cv.pdf', mimeType: 'application/pdf', buffer: PDF });
     await page.locator('#academicCerts').setInputFiles([
       { name: 'llb.pdf', mimeType: 'application/pdf', buffer: PDF },
       { name: 'transcript.png', mimeType: 'image/png', buffer: PNG },
     ]);
     await page.locator('#professionalCerts').setInputFiles({ name: 'cipp-e.jpg', mimeType: 'image/jpeg', buffer: JPG });
-    await page.getByRole('checkbox').check();
+    await page.getByRole('checkbox', { name: /may hold these details/ }).check();
     await page.getByRole('button', { name: 'Send my application' }).click();
     if (TURNSTILE_ON) {
       await expect(page.getByText('The security check did not complete')).toBeVisible({ timeout: 30_000 });

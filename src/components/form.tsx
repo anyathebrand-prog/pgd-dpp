@@ -48,7 +48,7 @@ export function ActionForm({
   outstanding?: { label: string; href: string }[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const submitted = useRef<Record<string, string> | null>(null);
+  const submitted = useRef<Record<string, string[]> | null>(null);
 
   /**
    * React 19 resets an uncontrolled form once its action resolves. That is
@@ -59,9 +59,10 @@ export function ActionForm({
    * when the action came back with an error.
    */
   const keepValues = async (prev: ActionState, form: FormData): Promise<ActionState> => {
-    const values: Record<string, string> = {};
+    // Every value of a repeated name: a checkbox group submits one per box.
+    const values: Record<string, string[]> = {};
     for (const [key, value] of form.entries()) {
-      if (typeof value === 'string') values[key] = value;
+      if (typeof value === 'string') (values[key] ??= []).push(value);
     }
     submitted.current = values;
     return action(prev, form);
@@ -97,11 +98,11 @@ export function ActionForm({
           // A checkbox submits its value (default "on") only when checked, and
           // a radio group submits the one that was chosen — so equality here
           // restores both correctly, and an absent key means unchecked.
-          element.checked = previous !== undefined && previous === element.value;
+          element.checked = previous !== undefined && previous.includes(element.value);
           continue;
         }
       }
-      if (previous !== undefined) element.value = previous;
+      if (previous !== undefined) element.value = previous[0];
     }
   }, [state]);
 
