@@ -91,7 +91,8 @@ No `RESEND_API_KEY` means mail lands in `.mail/` instead of a mailbox; `npm run 
 Staff 2FA is not relaxed locally — `npm run totp -- <email>` computes the code from the stored
 secret, so the login path is exercised rather than bypassed.
 
-Local runs on `unilag.localhost:3000`, `fulokoja.localhost:3000` and `futo.localhost:3000` — three seeded tenants, deliberately,
+Local runs on `unilag.localhost:3000`, `fulokoja.localhost:3000`, `futo.localhost:3000` and
+`kasu.localhost:3000` — four seeded tenants, deliberately,
 so isolation bugs surface in development. Seeded accounts and the rest of the setup are in the
 [README](README.md).
 

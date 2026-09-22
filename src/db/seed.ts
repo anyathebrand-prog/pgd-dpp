@@ -2,7 +2,7 @@
  * §7.9: local is seeded with a TWO-tenant fixture, deliberately.
  *
  * A one-tenant development database makes tenant leaks invisible until
- * production. With three institutions that all have applications, staff and
+ * production. With four institutions that all have applications, staff and
  * cohorts, a missing `institution_id` filter shows up the first time someone
  * opens a queue — and the isolation test in tests/isolation.test.ts has real
  * data on both sides to prove the point.
@@ -211,10 +211,24 @@ async function main() {
         offerExpiryDays: 21,
         status: 'live',
       },
+      {
+        slug: 'kasu',
+        name: 'Kaduna State University',
+        shortName: 'KASU',
+        city: 'Kaduna',
+        brandColour: '#1E6B3A',
+        paystackSubaccountCode: 'ACCT_seed_kasu',
+        paystackSharePercent: 88,
+        bankName: 'Jaiz Bank',
+        bankAccountName: 'Kaduna State University — PGD DPP',
+        bankAccountNumber: '0004718826',
+        offerExpiryDays: 21,
+        status: 'live',
+      },
     ])
     .returning();
 
-  const [unilag, ful, futo] = institutions;
+  const [unilag, ful, futo, kasu] = institutions;
 
   /*
    * What differs between the seeded universities, in one table, so a new
@@ -267,6 +281,17 @@ async function main() {
       candidateState: 'Imo',
       student: 'Obinna Eze',
       matric: 'C3108',
+    },
+    kasu: {
+      intake: 'April 2027 intake',
+      capacity: 45,
+      applicationKobo: 1_800_000,
+      tuitionKobo: 35_000_000,
+      facilitator: 'Dr Aisha Bello',
+      candidate: 'Musa Ibrahim',
+      candidateState: 'Kaduna',
+      student: 'Zainab Abdullahi',
+      matric: 'D4215',
     },
   };
 
@@ -494,6 +519,8 @@ async function main() {
     { email: 'admin@fulokoja.example.ng', name: 'Abdullahi Salihu', inst: ful, role: 'institution_admin' as const },
     { email: 'registry@futo.example.ng', name: 'Chiamaka Iwu', inst: futo, role: 'registry' as const },
     { email: 'admin@futo.example.ng', name: 'Ikenna Duru', inst: futo, role: 'institution_admin' as const },
+    { email: 'registry@kasu.example.ng', name: 'Fatima Yusuf', inst: kasu, role: 'registry' as const },
+    { email: 'admin@kasu.example.ng', name: 'Sani Garba', inst: kasu, role: 'institution_admin' as const },
   ];
 
   for (const member of staff) {
@@ -681,10 +708,11 @@ async function main() {
   ]);
 
   console.log('');
-  console.log('Seeded three tenants.');
+  console.log('Seeded four tenants.');
   console.log('  http://unilag.localhost:3000   University of Lagos');
   console.log('  http://fulokoja.localhost:3000 Federal University Lokoja');
   console.log('  http://futo.localhost:3000     Federal University of Technology, Owerri');
+  console.log('  http://kasu.localhost:3000     Kaduna State University');
   console.log('  http://localhost:3000          platform landing');
   console.log('');
   console.log(`Every seeded account uses the password: ${PASSWORD}`);
@@ -697,7 +725,7 @@ async function main() {
   console.log('  curator@example.ng            library curator at http://app.localhost:3000/curate');
   console.log('  platform@example.ng           super admin at http://app.localhost:3000/platform/tenants');
   console.log('');
-  console.log('The FUL and FUTO accounts mirror these. Try reading a UNILAG record while signed in as FUL.');
+  console.log('The FUL, FUTO and KASU accounts mirror these. Try reading a UNILAG record while signed in as FUL.');
 
   await sql.end();
 }
