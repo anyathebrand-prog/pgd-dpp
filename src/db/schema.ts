@@ -1118,6 +1118,27 @@ export const bookmarks = pgTable(
 
 /* ----------------------------------------------------------- shared: alumni */
 
+/**
+ * A facilitator's public profile, for the Faculty page: a photograph, a
+ * title line and a narrative biography, written by the facilitator.
+ *
+ * Private until they publish it. Showing somebody's photograph and life
+ * story to the public is processing that needs their say-so (NDPA), so
+ * `published` defaults to false and only they can set it. Keyed by person,
+ * not institution: one facilitator may teach at two universities, and the
+ * Faculty page shows each university they teach for.
+ */
+export const facilitatorProfiles = pgTable('facilitator_profiles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title'),
+  bio: text('bio'),
+  photoObjectKey: text('photo_object_key'),
+  published: boolean('published').notNull().default(false),
+  updatedAt: updatedAt(),
+});
+
 export const alumniProfiles = pgTable(
   'alumni_profiles',
   {
@@ -1632,6 +1653,7 @@ export const SHARED_TABLES = [
   'takedown_requests',
   'bookmarks',
   'alumni_profiles',
+  'facilitator_profiles',
   'privacy_notices',
   'consent_records',
   'data_subject_requests',

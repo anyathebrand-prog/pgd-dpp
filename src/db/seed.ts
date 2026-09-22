@@ -487,6 +487,16 @@ async function main() {
     await db
       .insert(s.memberships)
       .values({ userId: facilitator.id, institutionId: inst.id, role: 'facilitator' });
+    // The Faculty page: a published demo profile, without a photograph.
+    const FACULTY: Record<string, { title: string; bio: string }> = {
+      unilag: { title: "Senior Lecturer, Faculty of Law, University of Lagos", bio: "Dr Yemi Sowande teaches the NDPA 2023 in practice and consent that holds up. Before joining the Faculty of Law she spent nine years as Data Protection Officer at a Lagos commercial bank, where she led the bank's first GAID compliance audit and its response to a card-data breach. She is a licensed DPCO and writes on lawful bases in Nigerian financial services. (Demo profile.)" },
+      fulokoja: { title: "Lecturer, Department of Computer Science, Federal University Lokoja", bio: "Dr Ngozi Okafor teaches privacy by design and data protection impact assessments. Her research covers health-data systems in north-central Nigeria, and she has advised two state ministries of health on consent and record retention. She holds a doctorate in information systems and the CIPP/E. (Demo profile.)" },
+      futo: { title: "Associate Professor, School of Information and Communication Technology, FUTO", bio: "Dr Chinedu Nwachukwu teaches breach response and the 72-hour clock. A former incident-response lead at a telecoms operator, he has handled notifications to the Nigeria Data Protection Commission and trains engineering teams on containment and evidence. He brings the engineer's view of what the Act asks for. (Demo profile.)" },
+      kasu: { title: "Lecturer, Faculty of Law, Kaduna State University", bio: "Dr Aisha Bello teaches audit and the DPCO regime, and the rights data subjects hold. She practised in regulatory compliance for public-sector bodies in the north-west before joining KASU, and has supervised annual audit filings for several data controllers of major importance. (Demo profile.)" },
+    };
+    if (FACULTY[inst.slug]) {
+      await db.insert(s.facilitatorProfiles).values({ userId: facilitator.id, ...FACULTY[inst.slug], published: true });
+    }
     for (const m of modules) {
       await db
         .update(s.modules)

@@ -33,6 +33,12 @@ export default async function TeachLayout({ children }: { children: React.ReactN
           >
             Grading
           </Link>
+          <Link
+            href="/teach/profile"
+            className="t-body-sm text-ink-700 no-underline hover:text-ink-900"
+          >
+            My profile
+          </Link>
           <form action="/api/logout" method="post" className="ml-auto">
             <button className="t-body-sm text-ink-700 underline underline-offset-2">Sign out</button>
           </form>
