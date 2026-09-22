@@ -939,6 +939,11 @@ export const teachingApplications = pgTable('teaching_applications', {
   areas: text('areas').notNull(),
   cvObjectKey: text('cv_object_key'),
   cvFilename: text('cv_filename'),
+  /** Academic and professional certificates: several of each, all required. */
+  certificates: jsonb('certificates')
+    .$type<{ kind: 'academic' | 'professional'; key: string; filename: string; contentType: string }[]>()
+    .notNull()
+    .default([]),
   status: text('status', { enum: ['received', 'invited', 'declined'] }).notNull().default('received'),
   decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
   decidedAt: timestamp('decided_at', { withTimezone: true }),

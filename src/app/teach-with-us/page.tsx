@@ -68,18 +68,43 @@ export default async function TeachWithUs({
           >
             <Textarea id="areas" name="areas" rows={3} required />
           </Field>
-          <Field label="CV" name="cv" helper="PDF or Word (.docx), up to 5MB.">
+          <Field label="CV" name="cv" required helper="PDF or Word (.docx), up to 5MB.">
             <Input
               id="cv"
               name="cv"
               type="file"
+              required
               accept=".pdf,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            />
+          </Field>
+          <Field
+            label="Academic certificates"
+            name="academicCerts"
+            required
+            helper="Degree certificates and transcripts. Select several at once if you have them (up to 5). PDF, JPG or PNG, up to 5MB each; a clear phone photograph is fine."
+          >
+            <Input id="academicCerts" name="academicCerts" type="file" multiple required accept=".pdf,application/pdf,image/jpeg,image/png" />
+          </Field>
+          <Field
+            label="Professional certificates"
+            name="professionalCerts"
+            required
+            helper="For example: DPCO licence, CIPP/E, CIPM, CIPT, call to bar, NDPC-recognised training. Up to 5; PDF, JPG or PNG, up to 5MB each."
+          >
+            <Input
+              id="professionalCerts"
+              name="professionalCerts"
+              type="file"
+              multiple
+              required
+              accept=".pdf,application/pdf,image/jpeg,image/png"
             />
           </Field>
           <label className="t-body-sm mb-6 flex items-start gap-3 text-ink-900">
             <input type="checkbox" name="consent" required className="mt-1 h-5 w-5 shrink-0 accent-[#6da5f2]" />
             <span>
-              Data Protection Hub may hold these details, and my CV, to consider this application.
+              Data Protection Hub may hold these details, my CV and my certificates, to consider
+              this application.
               If I am not appointed they are deleted.{' '}
               <Link href="/privacy" className="text-ink-900 underline underline-offset-2">
                 How we handle your data

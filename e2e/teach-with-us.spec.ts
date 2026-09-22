@@ -22,6 +22,11 @@ const RUN = Date.now();
 const SECRET = Array.from(randomBytes(20), (b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[b % 32]).join('');
 const TURNSTILE_ON = Boolean(process.env.TURNSTILE_SECRET_KEY);
 
+// The smallest files that pass the byte checks for each format.
+const PDF = Buffer.from('%PDF-1.4\n%%EOF\n');
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+
 
 function sql() {
   return postgres(process.env.MIGRATION_DATABASE_URL!, { max: 1, onnotice: () => {} });
@@ -81,12 +86,34 @@ test.describe('Teach with us', () => {
     }
   });
 
-  test('the form is refused or sent, as the security check is configured', async ({ page }) => {
+  test('the CV and both kinds of certificate are required, on the server too', async ({ page }) => {
     await page.goto('/teach-with-us');
+    await page.waitForLoadState('load');
+    await page.locator('#fullName').fill('Dr Test Applicant');
+    await page.locator('#email').fill(`teach-${RUN}-nocerts@example.ng`);
+    await page.locator('#qualifications').fill('LLM in data protection law; eight years as a DPO in banking.');
+    await page.locator('#areas').fill('Breach response and the 72-hour clock');
+    await page.getByRole('checkbox').check();
+    await page.locator('#cv').setInputFiles({ name: 'cv.pdf', mimeType: 'application/pdf', buffer: PDF });
+    // The browser's own "required" is a convenience; the server decides.
+    await page.evaluate(() => document.querySelectorAll('input[type=file]').forEach((i) => i.removeAttribute('required')));
+    await page.getByRole('button', { name: 'Send my application' }).click();
+    await expect(page.getByText('Attach at least one academic certificate')).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('a complete application is refused or sent, as the security check is configured', async ({ page }) => {
+    await page.goto('/teach-with-us');
+    await page.waitForLoadState('load');
     await page.locator('#fullName').fill('Dr Test Applicant');
     await page.locator('#email').fill(`teach-${RUN}-form@example.ng`);
     await page.locator('#qualifications').fill('LLM in data protection law; eight years as a DPO in banking.');
     await page.locator('#areas').fill('Breach response and the 72-hour clock');
+    await page.locator('#cv').setInputFiles({ name: 'cv.pdf', mimeType: 'application/pdf', buffer: PDF });
+    await page.locator('#academicCerts').setInputFiles([
+      { name: 'llb.pdf', mimeType: 'application/pdf', buffer: PDF },
+      { name: 'transcript.png', mimeType: 'image/png', buffer: PNG },
+    ]);
+    await page.locator('#professionalCerts').setInputFiles({ name: 'cipp-e.jpg', mimeType: 'image/jpeg', buffer: JPG });
     await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Send my application' }).click();
     if (TURNSTILE_ON) {
@@ -95,24 +122,34 @@ test.describe('Teach with us', () => {
       await expect(page.getByText('Application sent')).toBeVisible({ timeout: 30_000 });
     }
     const db = sql();
-    const rows = await db`SELECT 1 FROM teaching_applications WHERE email = ${`teach-${RUN}-form@example.ng`}`;
+    const rows = await db`SELECT certificates FROM teaching_applications WHERE email = ${`teach-${RUN}-form@example.ng`}`;
     await db.end();
     expect(rows.length).toBe(TURNSTILE_ON ? 0 : 1);
+    if (!TURNSTILE_ON) {
+      expect(rows[0].certificates.map((c: { kind: string }) => c.kind).sort()).toEqual(['academic', 'academic', 'professional']);
+    }
   });
 
   test('the Hub invites one to chosen universities, and declines another', async ({ browser, baseURL }) => {
     const db = sql();
     for (const who of ['invite', 'decline']) {
       await db`
-        INSERT INTO teaching_applications (full_name, email, qualifications, areas)
+        INSERT INTO teaching_applications (full_name, email, qualifications, areas, certificates)
         VALUES (${`E2E ${who} ${RUN}`}, ${`teach-${RUN}-${who}@example.ng`},
-          'CIPP/E, ten years in privacy practice at a telecoms operator.', 'DPIAs')`;
+          'CIPP/E, ten years in privacy practice at a telecoms operator.', 'DPIAs',
+          ${JSON.stringify([
+            { kind: 'academic', key: `faculty-applications/e2e-${RUN}/academic-1.pdf`, filename: 'llb.pdf', contentType: 'application/pdf' },
+            { kind: 'professional', key: `faculty-applications/e2e-${RUN}/professional-2.jpg`, filename: 'dpco-licence.jpg', contentType: 'image/jpeg' },
+          ])}::jsonb)`;
     }
     await db.end();
 
     const { ctx, page } = await adminPage(browser, baseURL);
     await page.goto('/platform/faculty');
     await expect(page.getByRole('heading', { name: 'Faculty applications' })).toBeVisible();
+    const first = page.locator('li').filter({ hasText: `E2E invite ${RUN}` });
+    await expect(first.getByRole('link', { name: 'Academic certificate 1: llb.pdf' })).toBeVisible();
+    await expect(first.getByRole('link', { name: 'Professional certificate 1: dpco-licence.jpg' })).toBeVisible();
 
     // Inviting without choosing a university is refused.
     const invite = page.locator('li').filter({ hasText: `E2E invite ${RUN}` });

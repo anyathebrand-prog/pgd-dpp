@@ -13,8 +13,14 @@ const config: NextConfig = {
      * with a message no candidate could act on. The ceiling here is the
      * documented limit plus room for the multipart envelope; `uploadProblem`
      * is still what tells someone their file is too big, in words.
+     *
+     * Raised from 6mb to 25mb for the faculty application, which carries a
+     * CV and several academic and professional certificates at up to 5MB
+     * each. Each form still enforces its own limits in code (every file 5MB,
+     * that application 24MB in total: faculty-files.ts); this is only the
+     * framework's outer ceiling.
      */
-    serverActions: { bodySizeLimit: '6mb' },
+    serverActions: { bodySizeLimit: '25mb' },
   },
   async headers() {
     return [

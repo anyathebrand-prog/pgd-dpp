@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 import { readAcrossTenants } from '@/db';
 import { applications, assessments, assignmentFiles, documents, modules, submissions as submissionsFor, teachingApplications } from '@/db/schema';
 import { currentPrincipal } from '@/lib/auth';
@@ -162,7 +162,16 @@ async function assignmentFile(
  */
 async function teachingCv(key: string, me: NonNullable<Awaited<ReturnType<typeof currentPrincipal>>>) {
   const [row] = await readAcrossTenants('signed-document-access', (tx) =>
-    tx.select().from(teachingApplications).where(eq(teachingApplications.cvObjectKey, key)).limit(1),
+    tx
+      .select()
+      .from(teachingApplications)
+      .where(
+        or(
+          eq(teachingApplications.cvObjectKey, key),
+          sql`${teachingApplications.certificates} @> ${JSON.stringify([{ key }])}::jsonb`,
+        ),
+      )
+      .limit(1),
   );
   if (!row) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
@@ -177,13 +186,16 @@ async function teachingCv(key: string, me: NonNullable<Awaited<ReturnType<typeof
     entityId: row.id,
   });
 
+  const cert = row.certificates.find((c) => c.key === key);
   const body = await getObject(key);
   return new NextResponse(new Uint8Array(body), {
     headers: {
-      'Content-Type': row.cvFilename?.toLowerCase().endsWith('.pdf')
-        ? 'application/pdf'
-        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename="${(row.cvFilename ?? 'cv').replace(/[^\w .,()-]/g, '_')}"`,
+      'Content-Type': cert
+        ? cert.contentType
+        : row.cvFilename?.toLowerCase().endsWith('.pdf')
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename="${(cert?.filename ?? row.cvFilename ?? 'cv').replace(/[^\w .,()-]/g, '_')}"`,
       'Content-Security-Policy': "default-src 'none'; sandbox",
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'private, no-store',

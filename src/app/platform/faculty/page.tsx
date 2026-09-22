@@ -14,7 +14,7 @@ import { declineTeachingApplicant, inviteToFaculty } from '@/modules/admin/teach
  * One faculty, run by Data Protection Hub in collaboration with ALDAPCON:
  * "Teach with us" applications land here, not with a university. Inviting
  * someone grants the facilitator role at the universities chosen below and
- * sends the activation link; declining deletes their CV.
+ * sends the activation link; declining deletes their CV and certificates.
  */
 export default async function FacultyApplications({
   searchParams,
@@ -54,7 +54,7 @@ export default async function FacultyApplications({
             <p>
               {invited
                 ? 'They have the facilitator role at the universities you chose, and an activation link by email.'
-                : 'Their CV has been deleted. Reply to them by email if you have not already.'}
+                : 'Their CV and certificates have been deleted. Reply to them by email if you have not already.'}
             </p>
           </Banner>
         </div>
@@ -81,13 +81,30 @@ export default async function FacultyApplications({
                   <p className="t-body-sm mt-1 mb-4 whitespace-pre-line text-ink-900">{a.qualifications}</p>
                   <p className="t-caption m-0 text-ink-700">Would like to teach</p>
                   <p className="t-body-sm mt-1 mb-4 whitespace-pre-line text-ink-900">{a.areas}</p>
-                  {a.cvObjectKey ? (
-                    <a href={signedUrl(a.cvObjectKey)} className="t-body-sm text-ink-900 underline underline-offset-2">
-                      Download CV{a.cvFilename ? ` (${a.cvFilename})` : ''}
-                    </a>
-                  ) : (
-                    <p className="t-body-sm m-0 text-ink-700">No CV attached.</p>
-                  )}
+                  <p className="t-caption m-0 text-ink-700">Documents</p>
+                  <ul className="t-body-sm mt-1 mb-0 list-none space-y-1 p-0">
+                    {a.cvObjectKey ? (
+                      <li>
+                        <a href={signedUrl(a.cvObjectKey)} className="text-ink-900 underline underline-offset-2">
+                          CV{a.cvFilename ? `: ${a.cvFilename}` : ''}
+                        </a>
+                      </li>
+                    ) : (
+                      <li className="text-ink-700">No CV on file.</li>
+                    )}
+                    {(['academic', 'professional'] as const).map((kind) =>
+                      a.certificates
+                        .filter((c) => c.kind === kind)
+                        .map((c, i) => (
+                          <li key={c.key}>
+                            <a href={signedUrl(c.key)} className="text-ink-900 underline underline-offset-2">
+                              {kind === 'academic' ? 'Academic' : 'Professional'} certificate {i + 1}: {c.filename}
+                            </a>
+                          </li>
+                        )),
+                    )}
+                  </ul>
+                  <p className="t-caption mt-2 mb-0 text-ink-700">Links last five minutes; each opening is recorded.</p>
                 </div>
                 <div className="space-y-4">
                   <ActionForm action={inviteToFaculty} submitLabel="Invite to the faculty">
