@@ -60,6 +60,8 @@ They are the only decorative loops in the product. The list is closed: a third n
 - the full text is laid out invisibly in the same cell, so nothing around it moves;
 - the caret is solid, not blinking, so there is no second loop, and no CSS duration exceeds 240ms.
 
+One further motion item, not a loop: on AU-02 ("Check your email") an illustration of an envelope opening plays **once**, in about one second, when the page loads after a code is sent, and holds on its final frame (`public/illustrations/mail-sent.webp`). It answers an action the person just took, which is what §9 permits motion for; with `prefers-reduced-motion` the still final frame is served instead.
+
 Everything else in §9 stands, on PB-01 as everywhere: no scroll-triggered entrances, no hover lift or scale, no parallax, shimmer or spinners.
 
 ### 0.3 The tenant brand colour on navy (resolved 22 September 2026)

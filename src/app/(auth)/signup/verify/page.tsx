@@ -17,6 +17,23 @@ export default async function VerifyPage({
 
   return (
     <>
+      {/*
+        The one illustration in the application flow, because it answers
+        the thing that just happened: a code was sent. It plays once, about
+        a second, and holds on the envelope with its badge (brief §0.4);
+        with motion reduced, the still frame is all there is. Decorative,
+        so it has no alt text: the heading says the same thing in words.
+      */}
+      <picture>
+        <source srcSet="/illustrations/mail-sent-still.webp" media="(prefers-reduced-motion: reduce)" />
+        <img
+          src="/illustrations/mail-sent.webp"
+          alt=""
+          width={320}
+          height={320}
+          className="-mt-4 mb-2 -ml-4 block h-32 w-32 md:h-36 md:w-36"
+        />
+      </picture>
       <h1 className="t-h1 m-0 text-ink-900">Check your email</h1>
       <p className="t-body mt-3 mb-10 text-ink-700">
         We sent a six-digit code to <strong className="text-ink-900">{me.email}</strong>. Enter it
